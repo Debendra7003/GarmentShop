@@ -19,5 +19,11 @@ from django.urls import path,include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+<<<<<<< HEAD
     path('',include('GarmentShopAPI.urls')),
+=======
+    path('api/user/',include('GarmentShopAPI.urls')),
+    
+
+>>>>>>> 41f2a9330573d80436a6055c951abcd1418c0c58
 ]
