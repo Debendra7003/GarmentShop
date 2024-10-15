@@ -1,14 +1,14 @@
 from django.shortcuts import render
 from .renderers import UserRenderer
-from .serializers import UserRegisterSerializer,UserLoginSerializer,CompanySerializer,CatagorySerializer,CatagoryMinimalSerializer,ItemSerializer,ItemCodeSerializer,TokenRefreshSerializer
-from .serializers import DesignSerializer,DesignCreateUpdateSerializer
+from .serializers import UserRegisterSerializer,UserLoginSerializer,CompanySerializer,CategorySerializer,CategoryMinimalSerializer,ItemSerializer,ItemCodeSerializer,TokenRefreshSerializer
+from .serializers import DesignSerializer,DesignCreateUpdateSerializer,PartySerializer,TaxSerializer,FinancialYearSerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated 
 from django.contrib.auth import authenticate
-from .models import Company,Catagory,Item,Design
+from .models import Company,Category,Item,Design,Party,Tax,FinancialYear
 
 
 
@@ -67,7 +67,7 @@ class TokenRefreshView(APIView):
             except Exception as e:
                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+#Company view set
 class CompanyViewSet(APIView):
     permission_classes=[IsAuthenticated]
     
@@ -110,33 +110,34 @@ class CompanyViewSet(APIView):
         except Company.DoesNotExist:
             return Response({"message": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
 
-
-class CatagoryViewSet(APIView):
+#Catagory view set
+class CategoryViewSet(APIView):
+    permission_classes=[IsAuthenticated]
     def get(self, request, pk=None):
         if 'minimal' in request.path:  # Check if the request is for minimal data
-            catagories = Catagory.objects.all()
-            serializer = CatagoryMinimalSerializer(catagories, many=True)
+            categories = Category.objects.all()
+            serializer = CategoryMinimalSerializer(categories, many=True)
             return Response({"data": serializer.data}, status=status.HTTP_200_OK)
         else:
             if pk is None:
-                catagories = Catagory.objects.all()
-                serializer = CatagorySerializer(catagories, many=True)
+                categories = Category.objects.all()
+                serializer = CategorySerializer(categories, many=True)
                 return Response({"message": "List of categories retrieved successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
             else:
                 try:
-                    catagory = Catagory.objects.get(pk=pk)
-                    serializer = CatagorySerializer(catagory)
+                    category = Category.objects.get(pk=pk)
+                    serializer = CategorySerializer(category)
                     return Response({"message": "Category details retrieved successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
-                except Catagory.DoesNotExist:
+                except Category.DoesNotExist:
                     return Response({"message": "Category not found."}, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request):
         # Check for existing catagory_name before creating a new one
-        if Catagory.objects.filter(catagory_name=request.data.get('catagory_name')).exists():
+        if Category.objects.filter(category_name=request.data.get('category_name')).exists():
             return Response({"catagory_name": ["Category with this category name already exists."]}, 
                             status=status.HTTP_400_BAD_REQUEST)
         
-        serializer = CatagorySerializer(data=request.data)
+        serializer = CategorySerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response({"message": "Category created successfully!", "data": serializer.data}, status=status.HTTP_201_CREATED)
@@ -145,41 +146,42 @@ class CatagoryViewSet(APIView):
 
     def put(self, request, pk):
         try:
-            catagory = Catagory.objects.get(pk=pk)
+            category = Category.objects.get(pk=pk)
 
             # Check for existing catagory_name except for the current category being updated
-            new_catagory_name = request.data.get('catagory_name')
-            if new_catagory_name and new_catagory_name != catagory.catagory_name:
-                if Catagory.objects.exclude(pk=pk).filter(catagory_name=new_catagory_name).exists():
+            new_category_name = request.data.get('category_name')
+            if new_category_name and new_category_name != category.category_name:
+                if Category.objects.exclude(pk=pk).filter(category_name=new_category_name).exists():
                     return Response({"catagory_name": ["Category with this category name already exists."]}, 
                                     status=status.HTTP_400_BAD_REQUEST)
 
             # Check for existing catagory_code except for the current category being updated
-            new_catagory_code = request.data.get('catagory_code')
-            if new_catagory_code and new_catagory_code != catagory.catagory_code:
-                if Catagory.objects.exclude(pk=pk).filter(catagory_code=new_catagory_code).exists():
+            new_category_code = request.data.get('category_code')
+            if new_category_code and new_category_code != category.category_code:
+                if Category.objects.exclude(pk=pk).filter(category_code=new_category_code).exists():
                     return Response({"catagory_code": ["Category with this category code already exists."]}, 
                                     status=status.HTTP_400_BAD_REQUEST)
 
-            serializer = CatagorySerializer(catagory, data=request.data, partial=True)  # Allow partial updates
+            serializer = CategorySerializer(category, data=request.data, partial=True)  # Allow partial updates
             if serializer.is_valid():
                 serializer.save()
                 return Response({"message": "Category updated successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
             
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        except Catagory.DoesNotExist:
+        except Category.DoesNotExist:
             return Response({"message": "Category not found."}, status=status.HTTP_404_NOT_FOUND)
 
     def delete(self, request, pk):
         try:
-            catagory = Catagory.objects.get(pk=pk)
-            catagory.delete()
+            category = Category.objects.get(pk=pk)
+            category.delete()
             return Response({"message": "Category deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)
-        except Catagory.DoesNotExist:
+        except Category.DoesNotExist:
             return Response({"message": "Category not found."}, status=status.HTTP_404_NOT_FOUND)
-
+#Item view set
 class ItemViewSet(APIView):
+    permission_classes=[IsAuthenticated]
     """
     A ViewSet for managing item details.
     """
@@ -201,6 +203,7 @@ class ItemViewSet(APIView):
                 return Response({"message": "Item details retrieved successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
             except Item.DoesNotExist:
                 return Response({"message": "Item not found."}, status=status.HTTP_404_NOT_FOUND)
+                
 
     def post(self, request):
         """
@@ -237,8 +240,10 @@ class ItemViewSet(APIView):
             return Response({"message": "Item deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)  # Return 204 No Content
         except Item.DoesNotExist:
             return Response({"message": "Item not found."}, status=status.HTTP_404_NOT_FOUND)
+#ItemCode view set
         
 class ItemCodeViewSet(APIView):
+    permission_classes=[IsAuthenticated]
     """
     API to retrieve only 'id', 'item_name', and 'item_code'.
     Uses ItemCodeSerializer.
@@ -256,8 +261,10 @@ class ItemCodeViewSet(APIView):
                 return Response({"message": "Item details retrieved successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
             except Item.DoesNotExist:
                 return Response({"message": "Item not found."}, status=status.HTTP_404_NOT_FOUND)
+#Design view set
             
 class DesignViewSet(APIView):
+    permission_classes=[IsAuthenticated]
     
     def get(self, request, pk=None):
         """
@@ -309,3 +316,152 @@ class DesignViewSet(APIView):
             return Response({"message": "Design deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)
         except Design.DoesNotExist:
             return Response({"message": "Design not found."}, status=status.HTTP_404_NOT_FOUND)
+#Party view set
+class PartyViewSet(APIView):
+    permission_classes=[IsAuthenticated]
+    
+    def get(self, request, pk=None):
+        """
+        Retrieve all parties or a specific party by ID.
+        """
+        if pk is None:
+            parties = Party.objects.all()
+            serializer = PartySerializer(parties, many=True)
+            return Response({"message": "Party list retrieved successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
+        else:
+            try:
+                party = Party.objects.get(pk=pk)
+                serializer = PartySerializer(party)
+                return Response({"message": "Party details retrieved successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
+            except Party.DoesNotExist:
+                return Response({"message": "Party not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    def post(self, request):
+        """
+        Create a new party.
+        """
+        serializer = PartySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Party created successfully!", "data": serializer.data}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, pk):
+        """
+        Update an existing party.
+        """
+        try:
+            party = Party.objects.get(pk=pk)
+            serializer = PartySerializer(party, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message": "Party updated successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Party.DoesNotExist:
+            return Response({"message": "Party not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request, pk):
+        """
+        Delete a party.
+        """
+        try:
+            party = Party.objects.get(pk=pk)
+            party.delete()
+            return Response({"message": "Party deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)
+        except Party.DoesNotExist:
+            return Response({"message": "Party not found."}, status=status.HTTP_404_NOT_FOUND)
+#Tax view set
+class TaxViewSet(APIView):
+    permission_classes=[IsAuthenticated]
+    def get(self, request, pk=None):
+        if pk:
+            try:
+                tax = Tax.objects.get(pk=pk)
+                serializer = TaxSerializer(tax)
+                return Response({"message": "Tax details retrieved successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
+            except Tax.DoesNotExist:
+                return Response({"message": "Tax not found."}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            taxes = Tax.objects.all()
+            serializer = TaxSerializer(taxes, many=True)
+            return Response({"message": "Tax list retrieved successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = TaxSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Tax created successfully!", "data": serializer.data}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, pk):
+        try:
+            tax = Tax.objects.get(pk=pk)
+            serializer = TaxSerializer(tax, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message": "Tax updated successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Tax.DoesNotExist:
+            return Response({"message": "Tax not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request, pk):
+        try:
+            tax = Tax.objects.get(pk=pk)
+            tax.delete()
+            return Response({"message": "Tax deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)
+        except Tax.DoesNotExist:
+            return Response({"message": "Tax not found."}, status=status.HTTP_404_NOT_FOUND)
+#Financial Year view
+class FinancialYearViewSet(APIView):
+    permission_classes=[IsAuthenticated]
+
+    def get(self, request, pk=None):
+        """
+        Retrieve all financial years or a specific one by ID.
+        """
+        if pk is None:
+            financial_years = FinancialYear.objects.all()
+            serializer = FinancialYearSerializer(financial_years, many=True)
+            return Response({"message": "Financial year list retrieved successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
+        else:
+            try:
+                financial_year = FinancialYear.objects.get(pk=pk)
+                serializer = FinancialYearSerializer(financial_year)
+                return Response({"message": "Financial year details retrieved successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
+            except FinancialYear.DoesNotExist:
+                return Response({"message": "Financial year not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    def post(self, request):
+        """
+        Create a new financial year.
+        """
+        serializer = FinancialYearSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Financial year created successfully!", "data": serializer.data}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, pk):
+        """
+        Update an existing financial year.
+        """
+        try:
+            financial_year = FinancialYear.objects.get(pk=pk)
+            serializer = FinancialYearSerializer(financial_year, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message": "Financial year updated successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except FinancialYear.DoesNotExist:
+            return Response({"message": "Financial year not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request, pk):
+        """
+        Delete a financial year.
+        """
+        try:
+            financial_year = FinancialYear.objects.get(pk=pk)
+            financial_year.delete()
+            return Response({"message": "Financial year deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)
+        except FinancialYear.DoesNotExist:
+            return Response({"message": "Financial year not found."}, status=status.HTTP_404_NOT_FOUND)

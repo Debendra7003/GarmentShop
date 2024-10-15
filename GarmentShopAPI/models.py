@@ -1,7 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
 from django.core.validators import RegexValidator, EmailValidator
-
+from django.utils import timezone
+from django.core.validators import MinValueValidator, MaxValueValidator
 # Create your models here.
 class UserManager(BaseUserManager):
     def create_user(self,user_name, password=None,password2=None):
@@ -77,16 +78,19 @@ class Company(models.Model):
         validators=[EmailValidator(message="Enter a valid email address")]
     )
     address = models.TextField()
+    created_at = models.DateTimeField(default=timezone.now)  # Set default value for existing rows
+
 
     def __str__(self):
         return self.company_name
 
 #Catagory Creation
-
-class Catagory(models.Model):
-    catagory_name = models.CharField(max_length=255, unique=True)
-    catagory_code = models.CharField(max_length=100, unique=True)
+class Category(models.Model):
+    category_name = models.CharField(max_length=255, unique=True)
+    category_code = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
+    created_at = models.DateTimeField(default=timezone.now)  # Set default value for existing rows
+
 
     def __str__(self):
         return self.catagory_name
@@ -98,11 +102,12 @@ class Catagory(models.Model):
 class Item(models.Model):
     item_name = models.CharField(max_length=255)
     item_code = models.CharField(max_length=100, unique=True)
-    catagory = models.ForeignKey(Catagory, on_delete=models.CASCADE)  # Assuming you have a Category model
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)  # Assuming you have a Category model
     hsn_code = models.CharField(max_length=50)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     stock_quantity = models.IntegerField()
     description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)  # Set default value for existing rows
 
     def __str__(self):
         return self.item_name
@@ -113,6 +118,61 @@ class Design(models.Model):
     design_code = models.CharField(max_length=100, unique=True)
     description = models.TextField()
     associated_items = models.ManyToManyField(Item, related_name='designs')
+    created_at = models.DateTimeField(default=timezone.now)  # Set default value for existing rows
 
     def __str__(self):
         return self.design_name
+#Party Details
+class Party(models.Model):
+    VENDOR = 'Vendor'
+    SUPPLIER = 'Supplier'
+    CUSTOMER = 'Customer'
+    
+    PARTY_TYPES = [
+        (VENDOR, 'Vendor'),
+        (SUPPLIER, 'Supplier'),
+        (CUSTOMER, 'Customer'),
+    ]
+
+    party_name = models.CharField(max_length=255)
+    party_type = models.CharField(max_length=20, choices=PARTY_TYPES)
+    phone = models.CharField(max_length=15, blank=True, null=True)
+    email = models.EmailField(max_length=100, blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    registration_number = models.CharField(max_length=100, blank=True, null=True)
+    gst_number = models.CharField(max_length=100, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)  # Set default value for existing rows
+
+    def __str__(self):
+        return self.party_name
+#Tax Creation
+class Tax(models.Model):
+    TAX_CHOICES = [
+        ('CGST', 'Central GST'),
+        ('SGST', 'State GST'),
+        ('IGST', 'Integrated GST')
+    ]
+    
+    tax_name = models.CharField(max_length=50, choices=TAX_CHOICES)
+    tax_percentage = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Enter the tax percentage (0-100%)"
+    )
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)  # Set default value for existing rows
+
+    def __str__(self):
+        return f"{self.tax_name} ({self.tax_percentage}%)"
+#Financial Year Model
+class FinancialYear(models.Model):
+    financial_year_name = models.CharField(max_length=100)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    status = models.BooleanField(default=True)  # Active/Inactive
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)  # Set default value for existing rows
+
+    def __str__(self):
+        return self.financial_year_name
