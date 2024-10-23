@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 # Create your models here.
 class UserManager(BaseUserManager):
-    def create_user(self,user_name, password=None,password2=None):
+    def create_user(self,user_name, password=None,password2=None,**extra_fields):
         """
         Creates and saves a User with the given user_name and password.
         """
@@ -14,6 +14,7 @@ class UserManager(BaseUserManager):
 
         user = self.model(
             user_name=user_name,
+            **extra_fields
         )
 
         user.set_password(password)
@@ -34,6 +35,11 @@ class UserManager(BaseUserManager):
     
 class User(AbstractBaseUser):
     user_name = models.CharField(max_length=100,unique=True)
+    fullname = models.CharField(max_length=100)
+    email = models.EmailField(max_length=100,unique=True)
+    contact_number = models.CharField(max_length=20,unique=True)
+    role = models.CharField(max_length=100)
+    description = models.CharField(max_length=100,null=True)
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
     created_at=models.DateTimeField(auto_now_add=True)
@@ -59,6 +65,7 @@ class User(AbstractBaseUser):
         "Is the user a member of staff?"
         # Simplest possible answer: All admins are staff
         return self.is_admin
+    
 #Company Creation
 class Company(models.Model):
     company_name = models.CharField(max_length=255)
@@ -176,3 +183,5 @@ class FinancialYear(models.Model):
 
     def __str__(self):
         return self.financial_year_name
+
+

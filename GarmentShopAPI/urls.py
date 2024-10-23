@@ -1,11 +1,13 @@
 
 from django.urls import path,include
-from .views import UserLoginView,CategoryViewSet,CompanyViewSet,ItemViewSet,ItemCodeViewSet,TokenRefreshView,DesignViewSet,PartyViewSet,TaxViewSet
+from .views import UserLoginView,CategoryViewSet,CompanyViewSet,ItemViewSet,ItemCodeViewSet,TokenRefreshView,DesignViewSet,PartyViewSet,TaxViewSet,UserRegisterView
 from .views import FinancialYearViewSet
 
 urlpatterns = [
     
-    # path('register/',UserRegisterView.as_view(),name='register'),
+    path('register/',UserRegisterView.as_view(),name='register'),
+    path('userdetails/',UserRegisterView.as_view(),name='register'),
+    path('userdetails/<str:user_name>/',UserRegisterView.as_view(),name='user details'),
     path('login/',UserLoginView.as_view(),name='login'),
     path('token/',TokenRefreshView.as_view(),name='getacceesstoken'),
     path('companies/', CompanyViewSet.as_view(), name='company-list'),

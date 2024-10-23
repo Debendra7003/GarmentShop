@@ -8,7 +8,8 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated 
 from django.contrib.auth import authenticate
-from .models import Company,Category,Item,Design,Party,Tax,FinancialYear
+
+from .models import Company,Category,Item,Design,Party,Tax,FinancialYear,User
 
 
 
@@ -34,7 +35,48 @@ class UserRegisterView(APIView):
             return Response({'msg' : "Register Successfull"},status=status.HTTP_201_CREATED) 
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
     
+    def get(self, request, user_name=None, format=None):
+        # If 'user_name' is provided, fetch the specific user
+        if user_name:
+            user = User.objects.filter(user_name=user_name).first()
+            if user:
+                serializer = UserRegisterSerializer(user)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
+        # If no 'user_name' is provided, fetch all users
+        users = User.objects.all()
+        serializer = UserRegisterSerializer(users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    def put(self, request, user_name=None, format=None):
+        # If 'user_name' is provided, update the specific user
+        if user_name:
+            user = User.objects.filter(user_name=user_name).first()
+            if user:
+                # Perform update (allows updating any field, including 'user_name')
+                serializer = UserRegisterSerializer(user, data=request.data, partial=True)  # Partial updates allowed
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # If no 'user_name' is provided, return an error message
+        return Response({'error': 'Please provide a valid user_name for update'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, user_name=None, format=None):
+        # If 'user_name' is provided, delete the specific user
+        if user_name:
+            user = User.objects.filter(user_name=user_name).first()
+            if user:
+                user.delete()  # Delete the user
+                return Response({'msg': 'User deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # If no 'user_name' is provided, return an error message
+        return Response({'error': 'Please provide a valid user_name for deletion'}, status=status.HTTP_400_BAD_REQUEST)
+    
+ 
 #---------------------------------Login View--------------------------------- 
 class UserLoginView(APIView):
     renderer_classes=[UserRenderer]
@@ -47,6 +89,11 @@ class UserLoginView(APIView):
             if user is not None:
                 response_data = {
                 'user_name': user.user_name,
+                'email': user.email,
+                'fullname':user.fullname,
+                'contact_number':user.contact_number,
+                'role':user.role,
+                'description':user.description,
                 'is_admin': user.is_admin}
                 token= get_tokens_for_user(user)
                 return Response({'msg' : "Login Successfull",'user':response_data,'Token':token},status=status.HTTP_200_OK)
@@ -113,7 +160,8 @@ class CompanyViewSet(APIView):
 #Catagory view set
 class CategoryViewSet(APIView):
     permission_classes=[IsAuthenticated]
-    def get(self, request, pk=None):
+    renderer_classes=[UserRenderer]
+    def get(self, request, pk=None):   # To get all data
         if 'minimal' in request.path:  # Check if the request is for minimal data
             categories = Category.objects.all()
             serializer = CategoryMinimalSerializer(categories, many=True)
@@ -182,6 +230,7 @@ class CategoryViewSet(APIView):
 #Item view set
 class ItemViewSet(APIView):
     permission_classes=[IsAuthenticated]
+    renderer_classes=[UserRenderer]
     """
     A ViewSet for managing item details.
     """
@@ -244,6 +293,7 @@ class ItemViewSet(APIView):
         
 class ItemCodeViewSet(APIView):
     permission_classes=[IsAuthenticated]
+    renderer_classes=[UserRenderer]
     """
     API to retrieve only 'id', 'item_name', and 'item_code'.
     Uses ItemCodeSerializer.
@@ -265,6 +315,7 @@ class ItemCodeViewSet(APIView):
             
 class DesignViewSet(APIView):
     permission_classes=[IsAuthenticated]
+    renderer_classes=[UserRenderer]
     
     def get(self, request, pk=None):
         """
@@ -319,6 +370,7 @@ class DesignViewSet(APIView):
 #Party view set
 class PartyViewSet(APIView):
     permission_classes=[IsAuthenticated]
+    renderer_classes=[UserRenderer]
     
     def get(self, request, pk=None):
         """
@@ -373,6 +425,7 @@ class PartyViewSet(APIView):
 #Tax view set
 class TaxViewSet(APIView):
     permission_classes=[IsAuthenticated]
+    renderer_classes=[UserRenderer]
     def get(self, request, pk=None):
         if pk:
             try:
@@ -414,6 +467,7 @@ class TaxViewSet(APIView):
 #Financial Year view
 class FinancialYearViewSet(APIView):
     permission_classes=[IsAuthenticated]
+    renderer_classes=[UserRenderer]
 
     def get(self, request, pk=None):
         """
