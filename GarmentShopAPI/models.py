@@ -109,7 +109,8 @@ class Category(models.Model):
 class Item(models.Model):
     item_name = models.CharField(max_length=255)
     item_code = models.CharField(max_length=100, unique=True)
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)  # Assuming you have a Category model
+    category_item = models.CharField(max_length=255, default='default_category')
+
     hsn_code = models.CharField(max_length=50)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     stock_quantity = models.IntegerField()
@@ -124,7 +125,7 @@ class Design(models.Model):
     design_name = models.CharField(max_length=100)
     design_code = models.CharField(max_length=100, unique=True)
     description = models.TextField()
-    associated_items = models.ManyToManyField(Item, related_name='designs')
+    associated_items = models.JSONField(default=list)
     created_at = models.DateTimeField(default=timezone.now)  # Set default value for existing rows
 
     def __str__(self):
@@ -141,7 +142,7 @@ class Party(models.Model):
         (CUSTOMER, 'Customer'),
     ]
 
-    party_name = models.CharField(max_length=255)
+    party_name = models.CharField(max_length=255,unique=True)
     party_type = models.CharField(max_length=20, choices=PARTY_TYPES)
     phone = models.CharField(max_length=15, blank=True, null=True)
     email = models.EmailField(max_length=100, blank=True, null=True)
