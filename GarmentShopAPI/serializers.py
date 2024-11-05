@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from .models import User,Company,Category,Item,Design,Party,Tax,FinancialYear
 
-
 """ ------------User registration serializers--------------"""
 class UserRegisterSerializer(serializers.ModelSerializer):
     password2=serializers.CharField(style={'input_type':'password'},write_only=True)
