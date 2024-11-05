@@ -6,7 +6,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     password2=serializers.CharField(style={'input_type':'password'},write_only=True)
     class Meta:
         model= User
-        fields=['user_name','password','password2']
+        fields=['user_name','password','password2','fullname', 'email', 'contact_number', 'role','description']
 
         extra_kwargs={
             'password':{'write_only':True}
@@ -82,7 +82,7 @@ class CategoryMinimalSerializer(serializers.ModelSerializer):
 class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
-        fields = ['id', 'item_name', 'item_code', 'category', 'hsn_code', 'unit_price', 'stock_quantity', 'description']
+        fields = ['id', 'item_name', 'item_code', 'category_item', 'hsn_code', 'unit_price', 'stock_quantity', 'description']
 
     def validate_item_code(self, value):
         # Ensure item_code is unique
@@ -102,19 +102,23 @@ class ItemCodeSerializer(serializers.ModelSerializer):
         model=Item
         fields=['id','item_name','item_code']
 class DesignSerializer(serializers.ModelSerializer):
-    associated_items = ItemCodeSerializer(many=True, read_only=True)  # Display item names
+    associated_items = serializers.ListField(
+        child=serializers.CharField(), required=False
+    )
 
     class Meta:
         model = Design
-        fields = ['id', 'design_name', 'design_code', 'description', 'associated_items']
+        fields = ['design_name', 'design_code', 'description', 'associated_items']
+
 
 class DesignCreateUpdateSerializer(serializers.ModelSerializer):
-    # Allows you to pass item IDs to associate items with a design
-    associated_items = serializers.PrimaryKeyRelatedField(queryset=Item.objects.all(), many=True)
+    associated_items = serializers.ListField(
+        child=serializers.CharField(), required=False
+    )
 
     class Meta:
         model = Design
-        fields = ['id', 'design_name', 'design_code', 'description', 'associated_items']
+        fields = ['design_name', 'design_code', 'description', 'associated_items']
 #Party Serializer
 class PartySerializer(serializers.ModelSerializer):
     class Meta:

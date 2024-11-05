@@ -52,8 +52,12 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'GarmentShopAPI',
+<<<<<<< HEAD
     'Userdetails',
     'Barcode',
+=======
+    'Purchasedetails',
+>>>>>>> 3e9a4e0b2f73b3a42e01191b9d46cd2b751b1b3e
 ]
 
 MIDDLEWARE = [
@@ -114,6 +118,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        
     }
 }
 

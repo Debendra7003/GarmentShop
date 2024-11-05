@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 # Create your models here.
 class UserManager(BaseUserManager):
-    def create_user(self,user_name, password=None,password2=None):
+    def create_user(self,user_name, password=None,password2=None,**extra_fields):
         """
         Creates and saves a User with the given user_name and password.
         """
@@ -14,6 +14,7 @@ class UserManager(BaseUserManager):
 
         user = self.model(
             user_name=user_name,
+            **extra_fields
         )
 
         user.set_password(password)
@@ -34,6 +35,11 @@ class UserManager(BaseUserManager):
     
 class User(AbstractBaseUser):
     user_name = models.CharField(max_length=100,unique=True)
+    fullname = models.CharField(max_length=100)
+    email = models.EmailField(max_length=100,unique=True)
+    contact_number = models.CharField(max_length=20,unique=True)
+    role = models.CharField(max_length=100)
+    description = models.CharField(max_length=100,null=True)
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
     created_at=models.DateTimeField(auto_now_add=True)
@@ -59,6 +65,7 @@ class User(AbstractBaseUser):
         "Is the user a member of staff?"
         # Simplest possible answer: All admins are staff
         return self.is_admin
+    
 #Company Creation
 class Company(models.Model):
     company_name = models.CharField(max_length=255)
@@ -102,7 +109,8 @@ class Category(models.Model):
 class Item(models.Model):
     item_name = models.CharField(max_length=255)
     item_code = models.CharField(max_length=100, unique=True)
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)  # Assuming you have a Category model
+    category_item = models.CharField(max_length=255, default='default_category')
+
     hsn_code = models.CharField(max_length=50)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     stock_quantity = models.IntegerField()
@@ -117,7 +125,7 @@ class Design(models.Model):
     design_name = models.CharField(max_length=100)
     design_code = models.CharField(max_length=100, unique=True)
     description = models.TextField()
-    associated_items = models.ManyToManyField(Item, related_name='designs')
+    associated_items = models.JSONField(default=list)
     created_at = models.DateTimeField(default=timezone.now)  # Set default value for existing rows
 
     def __str__(self):
@@ -134,7 +142,7 @@ class Party(models.Model):
         (CUSTOMER, 'Customer'),
     ]
 
-    party_name = models.CharField(max_length=255)
+    party_name = models.CharField(max_length=255,unique=True)
     party_type = models.CharField(max_length=20, choices=PARTY_TYPES)
     phone = models.CharField(max_length=15, blank=True, null=True)
     email = models.EmailField(max_length=100, blank=True, null=True)
@@ -176,3 +184,5 @@ class FinancialYear(models.Model):
 
     def __str__(self):
         return self.financial_year_name
+
+
