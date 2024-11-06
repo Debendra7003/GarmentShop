@@ -97,17 +97,19 @@ class CategoryMinimalSerializer(serializers.ModelSerializer):
         model = Category
         fields = ['id','category_code', 'category_name']
 
-#Item Serializer
+#Item Serializers
 class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
         fields = ['id', 'item_name', 'item_code', 'category_item', 'hsn_code', 'unit_price', 'stock_quantity', 'description']
 
     def validate_item_code(self, value):
-        # Ensure item_code is unique
-        if Item.objects.filter(item_code=value).exists():
-            raise serializers.ValidationError("Item code must be unique.")
+        # Check for uniqueness only if this is a new instance (i.e., POST request)
+        if not self.instance:  # If instance is None, it's a creation request
+            if Item.objects.filter(item_code=value).exists():
+                raise serializers.ValidationError("Item code must be unique.")
         return value
+
 #Item Report
 class ItemReportSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.catagory_name', read_only=True)
