@@ -52,12 +52,9 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'GarmentShopAPI',
-<<<<<<< HEAD
+    'Purchasedetails',
     'Userdetails',
     'Barcode',
-=======
-    'Purchasedetails',
->>>>>>> 3e9a4e0b2f73b3a42e01191b9d46cd2b751b1b3e
 ]
 
 MIDDLEWARE = [

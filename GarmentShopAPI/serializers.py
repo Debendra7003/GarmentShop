@@ -55,23 +55,42 @@ class CompanySerializer(serializers.ModelSerializer):
 
 
 #Catagory Creation Serializer
+# class CategorySerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Category
+#         fields = ['id', 'category_name', 'category_code', 'description']
+
+#     def validate_category_code(self, value):
+#         # Ensure category_code is unique
+#         if Category.objects.filter(category_code=value).exists():
+#             raise serializers.ValidationError("Category code must be unique.")
+#         return value
+
+#     def validate_category_name(self, value):
+#         # Ensure category_name is unique
+#         if Category.objects.filter(category_name=value).exists():
+#             raise serializers.ValidationError("Category name must be unique.")
+#         return value
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id', 'category_name', 'category_code', 'description']
+        fields = ['category_name', 'category_code', 'description']
 
-    def validate_category_code(self, value):
-        # Ensure category_code is unique
-        if Category.objects.filter(category_code=value).exists():
-            raise serializers.ValidationError("Category code must be unique.")
-        return value
+    def validate(self, data):
+        # Get the instance if it's an update operation
+        instance = self.instance
 
-    def validate_category_name(self, value):
-        # Ensure category_name is unique
-        if Category.objects.filter(category_name=value).exists():
-            raise serializers.ValidationError("Category name must be unique.")
-        return value
+        # Check uniqueness for category_name only if it’s changed
+        if 'category_name' in data and instance and data['category_name'] != instance.category_name:
+            if Category.objects.filter(category_name=data['category_name']).exclude(pk=instance.pk).exists():
+                raise serializers.ValidationError({"category_name": "Category name must be unique."})
 
+        # Check uniqueness for category_code only if it’s changed
+        if 'category_code' in data and instance and data['category_code'] != instance.category_code:
+            if Category.objects.filter(category_code=data['category_code']).exclude(pk=instance.pk).exists():
+                raise serializers.ValidationError({"category_code": "Category code must be unique."})
+
+        return data
 #Retrive Catagory_code and catagory_name
 class CategoryMinimalSerializer(serializers.ModelSerializer):
     class Meta:

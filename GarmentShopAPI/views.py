@@ -203,30 +203,20 @@ class CategoryViewSet(APIView):
 
     def put(self, request, category_code):
         try:
+            # Fetch the category based on category_code
             category = Category.objects.get(category_code=category_code)
 
-            # Check for existing category_name except for the current category being updated
-            new_category_name = request.data.get('category_name')
-            if new_category_name and new_category_name != category.category_name:
-                if Category.objects.exclude(pk=category.pk).filter(category_name=new_category_name).exists():
-                    return Response({"category_name": ["Category with this name already exists."]}, 
-                                    status=status.HTTP_400_BAD_REQUEST)
-
+            # Update the category with partial data without checking uniqueness of category_name or category_code
             serializer = CategorySerializer(category, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
-                return Response({"message": "Category updated successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
+                return Response({
+                    "message": "Category updated successfully!",
+                    "data": serializer.data
+                }, status=status.HTTP_200_OK)
             
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        except Category.DoesNotExist:
-            return Response({"message": "Category not found."}, status=status.HTTP_404_NOT_FOUND)
-
-    def delete(self, request, category_code):
-        try:
-            category = Category.objects.get(category_code=category_code)
-            category.delete()
-            return Response({"message": "Category deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)
         except Category.DoesNotExist:
             return Response({"message": "Category not found."}, status=status.HTTP_404_NOT_FOUND)
 #Item view set

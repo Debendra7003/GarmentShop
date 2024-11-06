@@ -1,12 +1,6 @@
-<<<<<<< HEAD
  
 from django.urls import path,include
-from .views import UserLoginView,CategoryViewSet,CompanyViewSet,ItemViewSet,ItemCodeViewSet,TokenRefreshView,DesignViewSet,PartyViewSet,TaxViewSet
-=======
-
-from django.urls import path
 from .views import UserLoginView,CategoryViewSet,CompanyViewSet,ItemViewSet,ItemCodeViewSet,TokenRefreshView,DesignViewSet,PartyViewSet,TaxViewSet,UserRegisterView
->>>>>>> 3e9a4e0b2f73b3a42e01191b9d46cd2b751b1b3e
 from .views import FinancialYearViewSet
 
 urlpatterns = [
