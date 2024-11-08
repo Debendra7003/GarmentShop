@@ -3,7 +3,7 @@ from .renderers import UserRenderer
 from .serializers import UserRegisterSerializer,UserLoginSerializer,CompanySerializer,CategorySerializer,CategoryMinimalSerializer,ItemSerializer,ItemCodeSerializer,TokenRefreshSerializer
 from .serializers import DesignSerializer,DesignCreateUpdateSerializer,PartySerializer,TaxSerializer,FinancialYearSerializer
 from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework.views import APIView,View
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated 
@@ -26,7 +26,7 @@ def get_tokens_for_user(user):
 
 
 # ---------------------------Registration view----------------------------
-class UserRegisterView(APIView):
+class UserRegisterView(View):
     renderer_classes=[UserRenderer]
     def post(self,request,format=None):
         serializer=UserRegisterSerializer(data=request.data)

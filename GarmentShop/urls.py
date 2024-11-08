@@ -20,11 +20,7 @@ from django.urls import path,include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/user/',include('GarmentShopAPI.urls')),
-<<<<<<< HEAD
     path('api/barcode/', include('Barcode.urls')),
-=======
-    path('api/user/',include('Purchasedetails.urls')),
->>>>>>> 3e9a4e0b2f73b3a42e01191b9d46cd2b751b1b3e
     
 
 ]

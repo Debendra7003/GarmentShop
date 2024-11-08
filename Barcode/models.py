@@ -11,3 +11,21 @@ class BarcodeItem(models.Model):
     def __str__(self):
         return self.item_name
 
+
+class BarcodeGen(models.Model):
+    shop_name = models.CharField(max_length=25)
+    item_name = models.CharField(max_length=100)
+    item_size = models.CharField(max_length=10)
+    item_price = models.DecimalField(max_digits=100, decimal_places=2)
+    serial_number = models.CharField(max_length=20, unique=True)
+    barcode_image = models.ImageField(upload_to='barcodes/')
+
+    def __str__(self):
+        return f"{self.item_name} - {self.serial_number}"
+    
+    # def save(self, *args, **kwargs):
+    #     # Custom validation before saving
+    #     if len(self.shop_name) > 25:
+    #         raise ValueError("shop_name cannot exceed 25 characters.")
+        
+    #     super().save(*args, **kwargs)
