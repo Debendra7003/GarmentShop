@@ -20,3 +20,9 @@ class BarcodeSerializer(serializers.ModelSerializer):
     #     if len(value) > 25:
     #         raise serializers.ValidationError("Shop name cannot exceed 25 characters.")
     #     return value
+    
+class BarcodeDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BarcodeGen
+        # Exclude the barcode_image field
+        fields = ['shop_name', 'item_name', 'item_size', 'item_price', 'serial_number']

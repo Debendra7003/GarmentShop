@@ -3,7 +3,9 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView,View
 from .models import BarcodeItem,BarcodeGen
-from .serializers import BarcodeItemSerializer,BarcodeSerializer
+from .serializers import BarcodeItemSerializer,BarcodeSerializer,BarcodeDetailsSerializer
+from rest_framework.permissions import IsAuthenticated 
+from .renderers import UserRenderer
 import barcode
 from django.http import JsonResponse
 from barcode.writer import ImageWriter
@@ -22,6 +24,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 
 class BarcodeGenerateAPIView(APIView):
+    permission_classes=[IsAuthenticated]
+    renderer_classes=[UserRenderer]
     def post(self, request, *args, **kwargs):
         serializer = BarcodeItemSerializer(data=request.data)
         if serializer.is_valid():
@@ -56,8 +60,11 @@ class BarcodeGenerateAPIView(APIView):
 
 
 class GenerateBarcodeView(APIView):
+    permission_classes=[IsAuthenticated]
+    renderer_classes=[UserRenderer]
     # @csrf_exempt
     def post(self, request, *args, **kwargs):
+
         # Parse JSON data
         try:    
             data = request.data
@@ -140,4 +147,22 @@ class GenerateBarcodeView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             # Catch any other unexpected errors
+            return Response({"error": "An unexpected error occurred", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+class GetBarcodeDetailsView(APIView):
+    permission_classes=[IsAuthenticated]
+    renderer_classes=[UserRenderer]
+    def get(self, request, barcode, *args, **kwargs):
+        # Fetch the item details based on the provided barcode
+        try:
+            barcode_instance = BarcodeGen.objects.get(serial_number=barcode)
+
+            # Serialize the barcode instance without the image field
+            serializer = BarcodeDetailsSerializer(barcode_instance)
+
+            return Response({"item_details": serializer.data}, status=status.HTTP_200_OK)
+        except BarcodeGen.DoesNotExist:
+            return Response({"error": "Item not found for the given barcode"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
             return Response({"error": "An unexpected error occurred", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

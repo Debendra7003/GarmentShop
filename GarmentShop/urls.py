@@ -21,10 +21,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/user/',include('GarmentShopAPI.urls')),
     path('api/barcode/', include('Barcode.urls')),
-<<<<<<< HEAD
-=======
     path('api/purchase/',include('Purchasedetails.urls')),
->>>>>>> ea3ab202da7fbd9779581357bc5ff426edd11bc6
+    path('api/retailsale/',include('RetailSale.urls'))
     
 
 ]
