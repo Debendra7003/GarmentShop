@@ -26,8 +26,8 @@ def get_tokens_for_user(user):
 
 
 # ---------------------------Registration view----------------------------
-class UserRegisterView(View):
-    renderer_classes=[UserRenderer]
+class UserRegisterView(APIView):
+    # renderer_classes=[UserRenderer]
     def post(self,request,format=None):
         serializer=UserRegisterSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):

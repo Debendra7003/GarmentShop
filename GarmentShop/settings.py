@@ -52,16 +52,11 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'GarmentShopAPI',
-<<<<<<< HEAD
     'Userdetails',
     'Barcode',
     'Purchasedetails',
+    'RetailSale',
 
-=======
-    'Purchasedetails',
-    'Userdetails',
-    'Barcode',
->>>>>>> ea3ab202da7fbd9779581357bc5ff426edd11bc6
 ]
 
 MIDDLEWARE = [
@@ -133,7 +128,9 @@ REST_FRAMEWORK = {
     ),
         'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
     ],
+    
 }
 
 # Password validation
