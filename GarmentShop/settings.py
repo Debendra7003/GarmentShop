@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'Barcode',
     'Purchasedetails',
     'RetailSale',
+    'Bulksale',
 
 ]
 
