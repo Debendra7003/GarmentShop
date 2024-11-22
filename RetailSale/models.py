@@ -1,6 +1,7 @@
 from django.db import models
 
 class Order(models.Model):
+    bill_number = models.CharField(max_length=10, unique=True, blank=True)  # For the serial bill number
     fullname = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=15)
     address = models.TextField()
@@ -16,6 +17,8 @@ class Order(models.Model):
 
     items = models.ManyToManyField('Item', related_name='order_items')  # Renamed 'items' to 'order_items'
 
+
+
     def calculate_grand_total(self):
         # Calculate grand total based on the items
         total_items_price = sum(item.total_item_price for item in self.items.all())
@@ -24,6 +27,27 @@ class Order(models.Model):
     def calculate_total_price(self):
         # Calculate total price after applying tax and discount
         return self.calculate_grand_total() + self.tax - self.discount
+    
+    def save(self, *args, **kwargs):
+     if not self.bill_number:
+        try:
+            # Get the last order by bill_number
+            last_order = Order.objects.order_by('-bill_number').first()
+            if last_order and last_order.bill_number:
+                # Increment the last bill number
+                self.bill_number = f"{int(last_order.bill_number) + 1:05d}"
+            else:
+                # Start from '00001' if no orders exist
+                self.bill_number = "00001"
+        except Order.DoesNotExist:
+            # No orders exist yet
+            self.bill_number = "00001"
+
+     super().save(*args, **kwargs)
+
+
+
+
 
 
 class Item(models.Model):
