@@ -23,7 +23,6 @@ urlpatterns = [
     path('api/barcode/', include('Barcode.urls')),
     path('api/purchase/',include('Purchasedetails.urls')),
     path('api/retailsale/',include('RetailSale.urls')),
-    path('api/bulksale/',include('Bulksale.urls')),
-    
+    path('api/bulksale/',include('Bulksale.urls')),   
 
 ]

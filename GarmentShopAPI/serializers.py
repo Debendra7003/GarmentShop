@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User,Company,Category,Item,Design,Party,Tax,FinancialYear
+from .models import User,Company,Category,SubCategory,Item,Design,Party,Tax,FinancialYear
 
 """ ------------User registration serializers--------------"""
 class UserRegisterSerializer(serializers.ModelSerializer):
@@ -55,6 +55,33 @@ class CompanySerializer(serializers.ModelSerializer):
 
 
 #Catagory Creation Serializer
+class SubCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubCategory
+        fields = ['id', 'name']
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    sub_category_name = SubCategorySerializer(many=True)
+
+    class Meta:
+        model = Category
+        fields = ['category_code', 'category_name', 'description', 'sub_category_name']
+
+    def create(self, validated_data):
+        sub_category_data = validated_data.pop('sub_category_name')
+        category = Category.objects.create(**validated_data)
+        
+        for sub_cat in sub_category_data:
+            sub_category, created = SubCategory.objects.get_or_create(name=sub_cat['name'])
+            category.sub_category_name.add(sub_category)
+
+        return category
+    
+class GetCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ['category_code', 'category_name']
 # class CategorySerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = Category
@@ -71,26 +98,22 @@ class CompanySerializer(serializers.ModelSerializer):
 #         if Category.objects.filter(category_name=value).exists():
 #             raise serializers.ValidationError("Category name must be unique.")
 #         return value
-class CategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Category
-        fields = ['category_name', 'category_code', 'description']
-
-    def validate(self, data):
-        # Get the instance if it's an update operation
-        instance = self.instance
-
-        # Check uniqueness for category_name only if it’s changed
-        if 'category_name' in data and instance and data['category_name'] != instance.category_name:
-            if Category.objects.filter(category_name=data['category_name']).exclude(pk=instance.pk).exists():
-                raise serializers.ValidationError({"category_name": "Category name must be unique."})
-
-        # Check uniqueness for category_code only if it’s changed
-        if 'category_code' in data and instance and data['category_code'] != instance.category_code:
-            if Category.objects.filter(category_code=data['category_code']).exclude(pk=instance.pk).exists():
-                raise serializers.ValidationError({"category_code": "Category code must be unique."})
-
-        return data
+# class CategorySerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Category
+#         fields = ['category_name', 'category_code', 'description']
+#     def validate(self, data):
+#         # Get the instance if it's an update operation
+#         instance = self.instance
+#         # Check uniqueness for category_name only if it’s changed
+#         if 'category_name' in data and instance and data['category_name'] != instance.category_name:
+#             if Category.objects.filter(category_name=data['category_name']).exclude(pk=instance.pk).exists():
+#                 raise serializers.ValidationError({"category_name": "Category name must be unique."})
+#         # Check uniqueness for category_code only if it’s changed
+#         if 'category_code' in data and instance and data['category_code'] != instance.category_code:
+#             if Category.objects.filter(category_code=data['category_code']).exclude(pk=instance.pk).exists():
+#                 raise serializers.ValidationError({"category_code": "Category code must be unique."})
+#         return data
 #Retrive Catagory_code and catagory_name
 class CategoryMinimalSerializer(serializers.ModelSerializer):
     class Meta:

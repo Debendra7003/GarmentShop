@@ -25,10 +25,7 @@ class CalculatePaymentMethod2AmountView(APIView):
     # renderer_classes=[UserRenderer]
 
     def post(self,request):
-        """
-        Calculate the amount for payment method2
-
-        """
+        """Calculate the amount for payment method2 """
         try:
             total_price=Decimal(request.data.get('total_price'))
             payment_amount1=Decimal(request.data.get('payment_amount1'))

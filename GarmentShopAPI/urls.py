@@ -1,6 +1,6 @@
  
 from django.urls import path,include
-from .views import UserLoginView,CategoryViewSet,CompanyViewSet,ItemViewSet,ItemCodeViewSet,TokenRefreshView,DesignViewSet,PartyViewSet,TaxViewSet,UserRegisterView,FinancialYearViewSet
+from .views import UserLoginView,CategoryView,CompanyViewSet,ItemViewSet,ItemCodeViewSet,TokenRefreshView,DesignViewSet,PartyViewSet,TaxViewSet,UserRegisterView,FinancialYearViewSet,CategorySubCategoryView
 
 
 urlpatterns = [
@@ -14,13 +14,13 @@ urlpatterns = [
     path('companies/<str:gst>/', CompanyViewSet.as_view(), name='company-detail'),
 
     # Path for full category details
-    path('categories/', CategoryViewSet.as_view(), name='category-list'),
+    path('categories/', CategoryView.as_view(), name='category-list'),
     
-    # Path for minimal category details
-    path('categories/minimal/', CategoryViewSet.as_view(), name='category-minimal'),
+    # Path for Sub Category category details
+    path('subcategories/<str:category_name>/', CategorySubCategoryView.as_view(), name='get-subcategory-by-category'),
 
     # Path for category detail by ID
-    path('categories/<str:category_code>/', CategoryViewSet.as_view(), name='category-detail'),
+    path('categories/<str:category_code>/', CategoryView.as_view(), name='category-detail'),
 
     # Item URLs
     path('items/', ItemViewSet.as_view(), name='item-list'),  # List items and create a new item

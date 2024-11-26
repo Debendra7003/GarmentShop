@@ -4,6 +4,8 @@ from django.core.validators import RegexValidator, EmailValidator
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 # Create your models here.
+
+
 class UserManager(BaseUserManager):
     def create_user(self,user_name, password=None,password2=None,**extra_fields):
         """
@@ -93,14 +95,30 @@ class Company(models.Model):
 
 #Catagory Creation
 class Category(models.Model):
-    category_name = models.CharField(max_length=255, unique=True)
-    category_code = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True)
-    created_at = models.DateTimeField(default=timezone.now)  # Set default value for existing rows
-
+    category_code = models.CharField(max_length=20, unique=True)
+    category_name = models.CharField(max_length=50,unique=True)
+    description = models.TextField()
+    
+    # Subcategories should be stored in a Many-to-Many relationship
+    sub_category_name = models.ManyToManyField('SubCategory')
 
     def __str__(self):
-        return self.catagory_name
+        return self.category_name
+
+
+class SubCategory(models.Model):
+    name = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.name
+    
+# class Category(models.Model):
+#     category_name = models.CharField(max_length=255, unique=True)
+#     category_code = models.CharField(max_length=100, unique=True)
+#     description = models.TextField(blank=True)
+#     created_at = models.DateTimeField(default=timezone.now)  # Set default value for existing rows
+#     def __str__(self):
+#         return self.catagory_name
     
     
 
