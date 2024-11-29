@@ -61,8 +61,8 @@ class BarcodeGenerateAPIView(APIView):
 
 
 class GenerateBarcodeView(APIView):
-    permission_classes=[IsAuthenticated]
-    renderer_classes=[UserRenderer]
+    # permission_classes=[IsAuthenticated]
+    # renderer_classes=[UserRenderer]
     # @csrf_exempt
     def post(self, request, *args, **kwargs):
 
@@ -73,6 +73,7 @@ class GenerateBarcodeView(APIView):
             item_size = data.get("item_size")
             item_price = data.get("item_price")
             shop_name = data.get("shop_name")
+            category_name = data.get("category_name")  # New field
             quantity = data.get("quantity", 1)  # Default to 1 if not provided
 
             # Validate shop_name length
@@ -107,16 +108,11 @@ class GenerateBarcodeView(APIView):
                     font = ImageFont.load_default()
                     font_bold = font
 
-                # # Calculate the width of the shop name text and center it
-                # shop_name_width = draw.textsize(shop_name, font=font_bold)[0]
-                # shop_name_position = (width // 2 - shop_name_width // 2, 10)
-
-                # # Draw the shop name centered at the top
-                # draw.text(shop_name_position, shop_name, font=font_bold, fill="black")
-                # Get the width of the shop_name text for positioning
+                # Format category_name for display
+                formatted_category = f"{category_name.upper()}_{item_name.upper()}"
                 shop_name_width, _ = draw.textbbox((0, 0), shop_name, font=font_bold)[2:]
 
-                draw.text((20, 35), item_name.upper(), font=font, fill="black")
+                draw.text((20, 35), formatted_category, font=font, fill="black")
                 draw.text((20, 50), f"Size : {item_size}", font=font, fill="black")
                 draw.text((20, 65), f"Price: {item_price}/-", font=font, fill="black")
                 draw.text((width  - shop_name_width, 10), shop_name.upper(), font=font_bold, fill="black")

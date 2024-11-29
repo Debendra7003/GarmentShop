@@ -11,7 +11,7 @@ class BarcodeItemSerializer(serializers.ModelSerializer):
 class BarcodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = BarcodeGen
-        fields = ['shop_name', 'item_name', 'item_size', 'item_price', 'serial_number', 'barcode_image']
+        fields = ['shop_name','category_name', 'item_name', 'item_size', 'item_price', 'serial_number', 'barcode_image']
         read_only_fields = ['serial_number', 'barcode_image']
 
 
