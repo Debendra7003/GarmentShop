@@ -9,8 +9,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated 
 from django.contrib.auth import authenticate
 from rest_framework import viewsets
-
-from .models import Company,Category,Item,Design,Party,Tax,FinancialYear,User,SubCategory
+from django.db.models import F
+from .models import Company,Category,Item,Design,Party,Tax,FinancialYear,User,SubCategory,ItemSize
 
 
 
@@ -352,22 +352,82 @@ class ItemViewSet(APIView):
                     "message": "Item not found."
                 }, status=status.HTTP_404_NOT_FOUND)
 
+    # def post(self, request):
+    #     """
+    #     Create a new item.
+    #     """
+    #     serializer = ItemSerializer(data=request.data)  # Create a serializer with request data
+    #     if serializer.is_valid():  # Validate the serializer
+    #         serializer.save()  # Save the new item
+    #         return Response({
+    #             "message": "Item created successfully!",
+    #             "data": serializer.data
+    #         }, status=status.HTTP_201_CREATED)
+    #     return Response({
+    #         "message": "Item creation failed.",
+    #         "errors": serializer.errors
+    #     }, status=status.HTTP_400_BAD_REQUEST)  # Return validation errors
+
     def post(self, request):
         """
-        Create a new item.
+        Create a new item or update stock_quantity for an existing item_code.
         """
-        serializer = ItemSerializer(data=request.data)  # Create a serializer with request data
-        if serializer.is_valid():  # Validate the serializer
-            serializer.save()  # Save the new item
-            return Response({
-                "message": "Item created successfully!",
-                "data": serializer.data
-            }, status=status.HTTP_201_CREATED)
-        return Response({
-            "message": "Item creation failed.",
-            "errors": serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)  # Return validation errors
+        item_code = request.data.get('item_code')
 
+        # Check if the item_code is provided in the request data
+        if not item_code:
+            return Response({
+                "message": "Item code is required for updating or creating the item."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if the item already exists
+        item = Item.objects.filter(item_code=item_code).first()
+
+        # If the item exists, update stock quantities for sizes
+        if item:
+            sizes_data = request.data.get('sizes', [])
+            
+            # Iterate through the sizes passed in the request
+            for size_data in sizes_data:
+                size_instance = ItemSize.objects.filter(item=item, size=size_data['size']).first()
+
+                if size_instance:
+                    # If size exists, update the stock_quantity by adding the new value to the existing one
+                    size_instance.stock_quantity = F('stock_quantity') + size_data['stock_quantity']
+                    size_instance.save()
+                else:
+                    # If size does not exist, create a new size entry
+                    ItemSize.objects.create(
+                        item=item,
+                        size=size_data['size'],
+                        stock_quantity=size_data['stock_quantity']
+                    )
+
+            # Return the updated item with its sizes
+            return Response({
+                "message": "Stock quantities updated successfully!",
+                "data": ItemSerializer(item).data  # Return the updated item details
+            }, status=status.HTTP_200_OK)
+
+        else:
+            # If the item does not exist, create a new item
+            serializer = ItemSerializer(data=request.data)  # Create a new item serializer with request data
+            if serializer.is_valid():  # Validate the serializer
+                item = serializer.save()  # Save the new item
+                # Return the new item data after creation
+                return Response({
+                    "message": "Item created successfully!",
+                    "data": serializer.data
+                }, status=status.HTTP_201_CREATED)
+            
+            # Return validation errors if the serializer is invalid
+            return Response({
+                "message": "Item creation failed.",
+                "errors": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    
+    
     def put(self, request, item_code):
         """
         Update an existing item by item_code.

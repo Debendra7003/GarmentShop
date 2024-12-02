@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User,Company,Category,SubCategory,Item,Design,Party,Tax,FinancialYear
+from .models import User,Company,Category,SubCategory,Item,Design,Party,Tax,FinancialYear,ItemSize
 
 """ ------------User registration serializers--------------"""
 class UserRegisterSerializer(serializers.ModelSerializer):
@@ -120,19 +120,75 @@ class CategoryMinimalSerializer(serializers.ModelSerializer):
         model = Category
         fields = ['id','category_code', 'category_name']
 
-#Item Serializers
+#ItemSize Serializers
+
+class ItemSizeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ItemSize
+        fields = ['size', 'stock_quantity','unit_price']
+
+#Item Serializer
 class ItemSerializer(serializers.ModelSerializer):
+    sizes = ItemSizeSerializer(many=True)
+
     class Meta:
         model = Item
-        fields = ['id', 'item_name', 'item_code', 'category_item', 'hsn_code', 'unit_price', 'stock_quantity', 'description']
+        fields = [
+            'id', 'item_name', 'item_code', 'category_item', 'sub_category',
+            'hsn_code', 'description', 'created_at', 'sizes'
+        ]
 
     def validate_item_code(self, value):
-        # Check for uniqueness only if this is a new instance (i.e., POST request)
+        """
+        Ensure `item_code` is unique only for new instances.
+        """
         if not self.instance:  # If instance is None, it's a creation request
             if Item.objects.filter(item_code=value).exists():
                 raise serializers.ValidationError("Item code must be unique.")
         return value
 
+    def create(self, validated_data):
+        """
+        Create a new Item and associated ItemSize objects.
+        """
+        sizes_data = validated_data.pop('sizes', [])
+        item = Item.objects.create(**validated_data)
+        for size_data in sizes_data:
+            ItemSize.objects.create(item=item, **size_data)
+        return item
+
+    def update(self, instance, validated_data):
+        """
+        Update an Item and associated ItemSize objects.
+        """
+        sizes_data = validated_data.pop('sizes', None)
+
+        # Update main fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Update nested sizes
+        if sizes_data:
+            # Existing sizes keyed by size field
+            existing_sizes = {size.size: size for size in instance.sizes.all()}
+            new_sizes = {size_data['size']: size_data for size_data in sizes_data}
+
+            # Update or create sizes
+            for size, size_data in new_sizes.items():
+                if size in existing_sizes:
+                    size_obj = existing_sizes[size]
+                    for attr, value in size_data.items():
+                        setattr(size_obj, attr, value)
+                    size_obj.save()
+                else:
+                    ItemSize.objects.create(item=instance, **size_data)
+
+            # Remove sizes not included in the new data
+            for size in set(existing_sizes.keys()) - set(new_sizes.keys()):
+                existing_sizes[size].delete()
+
+        return instance
 #Item Report
 class ItemReportSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.catagory_name', read_only=True)
