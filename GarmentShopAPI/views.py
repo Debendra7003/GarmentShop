@@ -180,19 +180,54 @@ class CategoryView(APIView):
     #     serializer = GetCategorySerializer(categories, many=True)  # Serialize the categories
     #     return Response(serializer.data, status=status.HTTP_200_OK)
 
+    # def get(self, request, category_name=None, *args, **kwargs):
+    #     if category_name:
+    #         try:
+    #             # Retrieve the category based on category_name
+    #             category = Category.objects.get(category_name=category_name)
+    #             # Get all the subcategories related to this category
+    #             subcategories = category.sub_category_name.all()
+    #             # Serialize the subcategories using the SubCategorySerializer
+    #             serializer = SubCategorySerializer(subcategories, many=True)
+    #             return Response(serializer.data, status=status.HTTP_200_OK)
+    #         except Category.DoesNotExist:
+    #             return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
+    #     return Response({"error": "Category name not provided"}, status=status.HTTP_400_BAD_REQUEST)
+
     def get(self, request, category_name=None, *args, **kwargs):
-        if category_name:
-            try:
-                # Retrieve the category based on category_name
-                category = Category.objects.get(category_name=category_name)
-                # Get all the subcategories related to this category
-                subcategories = category.sub_category_name.all()
-                # Serialize the subcategories using the SubCategorySerializer
-                serializer = SubCategorySerializer(subcategories, many=True)
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            except Category.DoesNotExist:
-                return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
-        return Response({"error": "Category name not provided"}, status=status.HTTP_400_BAD_REQUEST)
+     if category_name:
+        try:
+            # Retrieve the category based on category_name
+            category = Category.objects.get(category_name=category_name)
+            # Serialize the category along with its subcategories
+            data = {
+                "category_code": category.category_code,
+                "category_name": category.category_name,
+                "description": category.description,
+                "sub_category_name": [
+                    {"name": subcategory.name} for subcategory in category.sub_category_name.all()
+                ]
+            }
+            return Response(data, status=status.HTTP_200_OK)
+        except Category.DoesNotExist:
+            return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
+     else:
+        # Retrieve all categories along with their subcategories
+        categories = Category.objects.prefetch_related('sub_category_name').all()
+        data = []
+        for category in categories:
+            data.append({
+                "category_code": category.category_code,
+                "category_name": category.category_name,
+                "description": category.description,
+                "sub_category_name": [
+                    {"name": subcategory.name} for subcategory in category.sub_category_name.all()
+                ]
+            })
+        return Response(data, status=status.HTTP_200_OK)
+
+
+    
 
     # def post(self, request, *args, **kwargs):
     #     data = request.data
@@ -256,7 +291,27 @@ class CategoryView(APIView):
 
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+     
+    def delete(self, request, category_name=None, *args, **kwargs):
+        if category_name:
+            try:
+                # Retrieve the category by its name
+                category = Category.objects.get(category_name=category_name)
+                
+                # Delete the category
+                category.delete()
+                
+                return Response({
+                    "message": f"Category '{category_name}' deleted successfully."
+                }, status=status.HTTP_200_OK)
+            except Category.DoesNotExist:
+                return Response({
+                    "error": f"Category '{category_name}' not found."
+                }, status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({
+                "error": "Category name not provided."
+            }, status=status.HTTP_400_BAD_REQUEST)
     
 # Retrieve related subcategories for the given category    
 class CategorySubCategoryView(APIView):

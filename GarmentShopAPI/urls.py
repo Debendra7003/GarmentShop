@@ -15,6 +15,7 @@ urlpatterns = [
 
     # Path for full category details
     path('categories/', CategoryView.as_view(), name='category-list'),
+    path('categories/<str:category_name>/', CategoryView.as_view(), name='category-delete'),
     
     # Path for Sub Category category details
     path('subcategories/<str:category_name>/', CategorySubCategoryView.as_view(), name='get-subcategory-by-category'),
