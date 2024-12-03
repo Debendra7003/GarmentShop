@@ -128,15 +128,22 @@ class Item(models.Model):
     item_name = models.CharField(max_length=255)
     item_code = models.CharField(max_length=100, unique=True)
     category_item = models.CharField(max_length=255, default='default_category')
-
+    sub_category=models.CharField(max_length=70,null=True,blank=True)
     hsn_code = models.CharField(max_length=50)
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
-    stock_quantity = models.IntegerField()
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)  # Set default value for existing rows
 
     def __str__(self):
         return self.item_name
+    
+class ItemSize(models.Model):
+    item = models.ForeignKey(Item, related_name="sizes", on_delete=models.CASCADE)
+    size = models.CharField(max_length=20)
+    stock_quantity = models.IntegerField()
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.size} - {self.stock_quantity}"
     
 #Design Creation
 class Design(models.Model):

@@ -53,6 +53,9 @@ class Order(models.Model):
 class Item(models.Model):
     order = models.ForeignKey(Order, related_name='order_items', on_delete=models.CASCADE)  # Renamed 'items' to 'order_items'
     barcode = models.CharField(max_length=100)
+    category = models.CharField(max_length=100)  # Added category field
+    sub_category = models.CharField(max_length=100, blank=True, null=True)  # Added sub-category field
+    size = models.CharField(max_length=50, blank=True, null=True)  # Added size field
     item_name = models.CharField(max_length=255)
     unit = models.PositiveIntegerField()  # Quantity of the item
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
