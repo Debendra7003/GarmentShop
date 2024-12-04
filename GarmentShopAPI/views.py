@@ -288,6 +288,56 @@ class CategoryView(APIView):
             return Response({
                 "error": "Category name not provided."
             }, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, category_name=None, *args, **kwargs):
+    
+        if not category_name:
+            return Response(
+            {"error": "Category name must be provided."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+        try:
+        # Retrieve the category using the provided category_name
+            category = Category.objects.get(category_name=category_name)
+        except Category.DoesNotExist:
+            return Response(
+            {"error": f"Category '{category_name}' not found."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Extract the request data
+        data = request.data
+        subcategories_data = data.pop('sub_category_name', None)
+
+    # Update the category fields
+        for field, value in data.items():
+            if hasattr(category, field):
+                setattr(category, field, value)
+
+    # If subcategories are provided, update them
+        if subcategories_data is not None:
+            for subcategory_dict in subcategories_data:
+                subcategory_name = subcategory_dict.get('name')
+                if subcategory_name:
+                # Create or get the subcategory, and add it to the category
+                    subcategory, created = SubCategory.objects.get_or_create(name=subcategory_name)
+                    category.sub_category_name.add(subcategory)
+
+    # Save the updated category
+        category.save()
+
+    # Serialize the updated category
+        serializer = CategorySerializer(category)
+
+        return Response(
+            {
+            "message": f"Category '{category_name}' updated successfully.",
+            "data": serializer.data
+            },
+            status=status.HTTP_200_OK
+    )
+
     
 # Retrieve related subcategories for the given category    
 class CategorySubCategoryView(APIView):

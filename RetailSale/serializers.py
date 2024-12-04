@@ -18,7 +18,7 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ['id', 'fullname', 'phone_number', 'address', 'tax', 'discount', 
                   'grand_total', 'total_price', 'payment_method1', 'payment_method2', 
-                  'narration', 'payment_method1_amount', 'payment_method2_amount', 'items']
+                  'narration', 'payment_method1_amount', 'payment_method2_amount','saletype', 'items']
 
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])  # Extract the items data

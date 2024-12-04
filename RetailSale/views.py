@@ -118,6 +118,7 @@ class CreateOrderView(APIView):
                 "narration": order.narration,
                 "payment_method1_amount": str(order.payment_method1_amount) if isinstance(order.payment_method1_amount, Decimal) else order.payment_method1_amount,
                 "payment_method2_amount": str(order.payment_method2_amount) if isinstance(order.payment_method2_amount, Decimal) else order.payment_method2_amount,
+                "saletype":order.saletype,
                 "items": [
                     {
                         "barcode": item.barcode,
