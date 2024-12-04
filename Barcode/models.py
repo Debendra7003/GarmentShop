@@ -14,6 +14,7 @@ class BarcodeItem(models.Model):
 
 class BarcodeGen(models.Model):
     shop_name = models.CharField(max_length=25)
+    category_name = models.CharField(max_length=100)  # New field
     item_name = models.CharField(max_length=100)
     item_size = models.CharField(max_length=10)
     item_price = models.DecimalField(max_digits=100, decimal_places=2)
