@@ -1,5 +1,6 @@
 from django.db import models
-
+from django.apps import apps
+from django.core.exceptions import ObjectDoesNotExist
 class Order(models.Model):
     bill_number = models.CharField(max_length=10, unique=True, blank=True)  # For the serial bill number
     fullname = models.CharField(max_length=255)
@@ -27,6 +28,26 @@ class Order(models.Model):
     def calculate_total_price(self):
         # Calculate total price after applying tax and discount
         return self.calculate_grand_total() + self.tax - self.discount
+    def save(self, *args, **kwargs):
+        if not self.bill_number:
+            try:
+                # Get the last order by bill_number
+                last_order = Order.objects.order_by('-bill_number').first()
+                if last_order and last_order.bill_number:
+                    # Increment the last bill number
+                    self.bill_number = f"{int(last_order.bill_number) + 1:05d}"
+                else:
+                    # Start from '00001' if no orders exist
+                    self.bill_number = "00001"
+            except Order.DoesNotExist:
+                # No orders exist yet
+                self.bill_number = "00001"
+
+        super().save(*args, **kwargs)
+
+        
+    
+       
     
     def save(self, *args, **kwargs):
      if not self.bill_number:
@@ -45,6 +66,8 @@ class Order(models.Model):
 
      super().save(*args, **kwargs)
 
+    
+
 
 
 
@@ -53,7 +76,7 @@ class Order(models.Model):
 class Item(models.Model):
     order = models.ForeignKey(Order, related_name='order_items', on_delete=models.CASCADE)  # Renamed 'items' to 'order_items'
     barcode = models.CharField(max_length=100)
-    category = models.CharField(max_length=100)  # Added category field
+    category = models.CharField(max_length=100,blank=True,null=True)  # Added category field
     sub_category = models.CharField(max_length=100, blank=True, null=True)  # Added sub-category field
     size = models.CharField(max_length=50, blank=True, null=True)  # Added size field
     item_name = models.CharField(max_length=255)
@@ -64,3 +87,5 @@ class Item(models.Model):
     def total_item_price(self):
         # Calculate total price for the item based on quantity and unit price
         return self.unit * self.unit_price
+    def __str__(self):
+        return f"{self.item_name} ({self.category}) - {self.unit} x {self.unit_price}"

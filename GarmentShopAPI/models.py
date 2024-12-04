@@ -111,14 +111,7 @@ class SubCategory(models.Model):
 
     def __str__(self):
         return self.name
-    
-# class Category(models.Model):
-#     category_name = models.CharField(max_length=255, unique=True)
-#     category_code = models.CharField(max_length=100, unique=True)
-#     description = models.TextField(blank=True)
-#     created_at = models.DateTimeField(default=timezone.now)  # Set default value for existing rows
-#     def __str__(self):
-#         return self.catagory_name
+
     
     
 
@@ -126,7 +119,7 @@ class SubCategory(models.Model):
 
 class Item(models.Model):
     item_name = models.CharField(max_length=255)
-    item_code = models.CharField(max_length=100, unique=True)
+    item_code = models.CharField(max_length=100, unique=True,blank=True, null=True)
     category_item = models.CharField(max_length=255, default='default_category')
     sub_category=models.CharField(max_length=70,null=True,blank=True)
     hsn_code = models.CharField(max_length=50)

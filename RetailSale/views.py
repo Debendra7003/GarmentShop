@@ -6,36 +6,95 @@ from rest_framework.permissions import IsAuthenticated
 from .renderers import UserRenderer  # Assuming this exists for custom rendering
 from .models import Order
 from decimal import Decimal
+from django.db.models import F
+from django.db import transaction
+from GarmentShopAPI.models import Item, ItemSize  # Import Item and ItemSize models
 
 class CreateOrderView(APIView):
     permission_classes = [IsAuthenticated]
     renderer_classes = [UserRenderer]
 
+    # def post(self, request):
+    #     """
+    #     Create a new order.
+    #     """
+    #     serializer = OrderSerializer(data=request.data)  # No 'many=True' here
+    #     if serializer.is_valid():
+    #         order = serializer.save()  # Save the order and associated items
+
+    #         # Calculate and save the grand_total and total_price
+    #         order.total_price = order.calculate_total_price()
+    #         order.grand_total = order.calculate_grand_total()
+    #         order.save()  # Save the updated order with total values
+
+    #         # Re-fetch the serialized data to include the updated fields
+    #         updated_serializer = OrderSerializer(order)
+
+    #         return Response(
+    #             {
+    #                 "message": "Order created successfully!",
+    #                 "bill_number": order.bill_number,  # Include the bill number in the response
+    #                 "data": updated_serializer.data  # Use updated serializer data
+    #             },
+    #             status=status.HTTP_201_CREATED
+    #         )
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     def post(self, request):
         """
-        Create a new order.
+        Create a new order and deduct stock quantities by matching item_name, category, sub_category, and size.
         """
-        serializer = OrderSerializer(data=request.data)  # No 'many=True' here
-        if serializer.is_valid():
-            order = serializer.save()  # Save the order and associated items
+        with transaction.atomic():  # Ensure all operations are atomic
+            serializer = OrderSerializer(data=request.data)
+            if serializer.is_valid():
+                order = serializer.save()  # Save the order
 
-            # Calculate and save the grand_total and total_price
-            order.total_price = order.calculate_total_price()
-            order.grand_total = order.calculate_grand_total()
-            order.save()  # Save the updated order with total values
+                # Deduct stock for each item in the order
+                for item_data in request.data.get('items', []):
+                    try:
+                        # Fetch the related Item and ItemSize based on provided fields
+                        item = Item.objects.get(
+                            item_name=item_data['item_name'],
+                            category_item=item_data['category'],
+                            sub_category=item_data.get('sub_category')  # Handle optional sub_category
+                        )
+                        item_size = item.sizes.get(size=item_data['size'])  # Access related size
 
-            # Re-fetch the serialized data to include the updated fields
-            updated_serializer = OrderSerializer(order)
+                        # Check if stock is sufficient
+                        if item_size.stock_quantity >= item_data['unit']:
+                            # Deduct the stock from ItemSize
+                            item_size.stock_quantity = F('stock_quantity') - item_data['unit']
+                            item_size.save()
+                        else:
+                            return Response(
+                                {"error": f"Insufficient stock for {item.item_name} (Size: {item_data['size']})."},
+                                status=status.HTTP_400_BAD_REQUEST
+                            )
+                    except (Item.DoesNotExist, ItemSize.DoesNotExist):
+                        return Response(
+                            {
+                                "error": f"Item not found for name {item_data['item_name']}, category {item_data['category']}, "
+                                         f"sub_category {item_data.get('sub_category')} and size {item_data['size']}."
+                            },
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
 
-            return Response(
-                {
-                    "message": "Order created successfully!",
-                    "bill_number": order.bill_number,  # Include the bill number in the response
-                    "data": updated_serializer.data  # Use updated serializer data
-                },
-                status=status.HTTP_201_CREATED
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                # Calculate and save totals
+                order.total_price = order.calculate_total_price()
+                order.grand_total = order.calculate_grand_total()
+                order.save()
+
+                # Return response with updated data
+                updated_serializer = OrderSerializer(order)
+                return Response(
+                    {
+                        "message": "Order created successfully!",
+                        "bill_number": order.bill_number,
+                        "data": updated_serializer.data
+                    },
+                    status=status.HTTP_201_CREATED
+                )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request):
         """
@@ -62,6 +121,9 @@ class CreateOrderView(APIView):
                 "items": [
                     {
                         "barcode": item.barcode,
+                        "category":item.category,
+                        "sub_category":item.sub_category,
+                        "size":item.size,
                         "item_name": item.item_name,
                         "unit": item.unit,
                         "unit_price": str(item.unit_price) if isinstance(item.unit_price, Decimal) else item.unit_price,
