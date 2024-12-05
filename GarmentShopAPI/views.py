@@ -174,25 +174,7 @@ class CompanyViewSet(APIView):
             return Response({"message": "Company with this GST not found."}, status=status.HTTP_404_NOT_FOUND)
 #Catagory view set
 class CategoryView(APIView):
-    # def get(self, request, *args, **kwargs):
-    #     # Retrieve all categories
-    #     categories = Category.objects.all()  # Fetch all categories
-    #     serializer = GetCategorySerializer(categories, many=True)  # Serialize the categories
-    #     return Response(serializer.data, status=status.HTTP_200_OK)
-
-    # def get(self, request, category_name=None, *args, **kwargs):
-    #     if category_name:
-    #         try:
-    #             # Retrieve the category based on category_name
-    #             category = Category.objects.get(category_name=category_name)
-    #             # Get all the subcategories related to this category
-    #             subcategories = category.sub_category_name.all()
-    #             # Serialize the subcategories using the SubCategorySerializer
-    #             serializer = SubCategorySerializer(subcategories, many=True)
-    #             return Response(serializer.data, status=status.HTTP_200_OK)
-    #         except Category.DoesNotExist:
-    #             return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
-    #     return Response({"error": "Category name not provided"}, status=status.HTTP_400_BAD_REQUEST)
+   
 
     def get(self, request, category_name=None, *args, **kwargs):
      if category_name:
@@ -229,13 +211,7 @@ class CategoryView(APIView):
 
     
 
-    # def post(self, request, *args, **kwargs):
-    #     data = request.data
-    #     serializer = CategorySerializer(data=data)
-    #     if serializer.is_valid():
-    #         category = serializer.save()  # `save()` now uses the corrected `create()` method
-    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 
     def post(self, request, *args, **kwargs):
      data = request.data
@@ -312,6 +288,56 @@ class CategoryView(APIView):
             return Response({
                 "error": "Category name not provided."
             }, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, category_name=None, *args, **kwargs):
+    
+        if not category_name:
+            return Response(
+            {"error": "Category name must be provided."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+        try:
+        # Retrieve the category using the provided category_name
+            category = Category.objects.get(category_name=category_name)
+        except Category.DoesNotExist:
+            return Response(
+            {"error": f"Category '{category_name}' not found."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Extract the request data
+        data = request.data
+        subcategories_data = data.pop('sub_category_name', None)
+
+    # Update the category fields
+        for field, value in data.items():
+            if hasattr(category, field):
+                setattr(category, field, value)
+
+    # If subcategories are provided, update them
+        if subcategories_data is not None:
+            for subcategory_dict in subcategories_data:
+                subcategory_name = subcategory_dict.get('name')
+                if subcategory_name:
+                # Create or get the subcategory, and add it to the category
+                    subcategory, created = SubCategory.objects.get_or_create(name=subcategory_name)
+                    category.sub_category_name.add(subcategory)
+
+    # Save the updated category
+        category.save()
+
+    # Serialize the updated category
+        serializer = CategorySerializer(category)
+
+        return Response(
+            {
+            "message": f"Category '{category_name}' updated successfully.",
+            "data": serializer.data
+            },
+            status=status.HTTP_200_OK
+    )
+
     
 # Retrieve related subcategories for the given category    
 class CategorySubCategoryView(APIView):
@@ -330,54 +356,8 @@ class CategorySubCategoryView(APIView):
         except Category.DoesNotExist:
             return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
 
-# class CategoryViewSet(APIView):
-#     permission_classes=[IsAuthenticated]
-#     renderer_classes=[UserRenderer]
-#     def get(self, request, category_code=None):
-#         if category_code:
-#             try:
-#                 category = Category.objects.get(category_code=category_code)
-#                 serializer = CategorySerializer(category)
-#                 return Response({"data": serializer.data}, status=status.HTTP_200_OK)
-#             except Category.DoesNotExist:
-#                 return Response({"message": "Category not found."}, status=status.HTTP_404_NOT_FOUND)
-#         else:
-#             categories = Category.objects.all()
-#             serializer = CategorySerializer(categories, many=True)
-#             return Response({"data": serializer.data}, status=status.HTTP_200_OK)
 
-#     def post(self, request):
-#         # Check for existing category_name
-#         if Category.objects.filter(category_name=request.data.get('category_name')).exists():
-#             return Response({"category_name": ["Category with this name already exists."]}, 
-#                             status=status.HTTP_400_BAD_REQUEST)
-        
-#         serializer = CategorySerializer(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response({"message": "Category created successfully!", "data": serializer.data}, status=status.HTTP_201_CREATED)
-        
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#     def put(self, request, category_code):
-#         try:
-#             # Fetch the category based on category_code
-#             category = Category.objects.get(category_code=category_code)
-
-#             # Update the category with partial data without checking uniqueness of category_name or category_code
-#             serializer = CategorySerializer(category, data=request.data, partial=True)
-#             if serializer.is_valid():
-#                 serializer.save()
-#                 return Response({
-#                     "message": "Category updated successfully!",
-#                     "data": serializer.data
-#                 }, status=status.HTTP_200_OK)
-            
-#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-#         except Category.DoesNotExist:
-#             return Response({"message": "Category not found."}, status=status.HTTP_404_NOT_FOUND)
-#Item view set
+#Item stock entry view set
 class ItemViewSet(APIView):
     permission_classes = [IsAuthenticated]
     renderer_classes = [UserRenderer]
@@ -407,22 +387,7 @@ class ItemViewSet(APIView):
                     "message": "Item not found."
                 }, status=status.HTTP_404_NOT_FOUND)
 
-    # def post(self, request):
-    #     """
-    #     Create a new item.
-    #     """
-    #     serializer = ItemSerializer(data=request.data)  # Create a serializer with request data
-    #     if serializer.is_valid():  # Validate the serializer
-    #         serializer.save()  # Save the new item
-    #         return Response({
-    #             "message": "Item created successfully!",
-    #             "data": serializer.data
-    #         }, status=status.HTTP_201_CREATED)
-    #     return Response({
-    #         "message": "Item creation failed.",
-    #         "errors": serializer.errors
-    #     }, status=status.HTTP_400_BAD_REQUEST)  # Return validation errors
-
+    
     def post(self, request):
         """
         Create a new item or update stock_quantity for an existing item_code.
