@@ -65,9 +65,8 @@ class GenerateBarcodeView(APIView):
     # renderer_classes=[UserRenderer]
     # @csrf_exempt
     def post(self, request, *args, **kwargs):
-
-        # Parse JSON data
-        try:    
+        try:
+            # Parse JSON data
             data = request.data
             item_name = data.get("item_name")
             item_size = data.get("item_size")
@@ -88,11 +87,13 @@ class GenerateBarcodeView(APIView):
 
                 # Generate the barcode image
                 barcode = Code128(serial_number, writer=ImageWriter())
-                barcode_image = barcode.render(writer_options={"font_size": 1,
-                                                            "text_distance": 1,
-                                                            "module_width": 0.2,
-                                                            "module_height": 5,
-                                                            "write_text": False})
+                barcode_image = barcode.render(writer_options={
+                    "font_size": 1,
+                    "text_distance": 1,
+                    "module_width": 0.2,
+                    "module_height": 5,
+                    "write_text": False
+                })
 
                 # Create a blank image for adding additional text (like item details and shop name)
                 width, height = barcode_image.size
@@ -115,13 +116,16 @@ class GenerateBarcodeView(APIView):
                 draw.text((20, 35), formatted_category, font=font, fill="black")
                 draw.text((20, 50), f"Size : {item_size}", font=font, fill="black")
                 draw.text((20, 65), f"Price: {item_price}/-", font=font, fill="black")
-                draw.text((width  - shop_name_width, 10), shop_name.upper(), font=font_bold, fill="black")
+                draw.text((width - shop_name_width, 10), shop_name.upper(), font=font_bold, fill="black")
                 draw.text((width // 2 - 15, height + 70), serial_number.upper(), font=font, fill="black")
 
                 # Save barcode to in-memory file
                 buffer = io.BytesIO()
                 new_image.save(buffer, "PNG")
                 buffer.seek(0)
+
+                # Encode the image to Base64 (Modified line)
+                encoded_image = base64.b64encode(buffer.getvalue()).decode('utf-8')  # Added for Base64 encoding
 
                 # Save barcode image and details to the database
                 barcode_instance = BarcodeGen(
@@ -136,9 +140,13 @@ class GenerateBarcodeView(APIView):
 
                 # Serialize barcode instance
                 serializer = BarcodeSerializer(barcode_instance)
-                response_data.append(serializer.data)
 
-            return JsonResponse({"barcodes": response_data})
+                # Add Base64 encoded image to the response (Modified line)
+                serialized_data = serializer.data  # Retrieve serialized data
+                serialized_data['barcode_image_base64'] = encoded_image  # Attach Base64 encoded image
+                response_data.append(serialized_data)
+
+            return Response({"barcodes": response_data}, status=status.HTTP_201_CREATED)
         except ValueError as e:
             # Catch specific errors and return them in the response
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
