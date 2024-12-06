@@ -1,5 +1,6 @@
 from django.db import models
 from django.apps import apps
+from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
 class Order(models.Model):
     bill_number = models.CharField(max_length=10, unique=True, blank=True)  # For the serial bill number
@@ -17,7 +18,7 @@ class Order(models.Model):
     payment_method2_amount = models.DecimalField(max_digits=10, decimal_places=2)
     saletype = models.CharField(max_length=50, blank=True, null=True)  # New saletype field
     items = models.ManyToManyField('Item', related_name='order_items')  # Renamed 'items' to 'order_items'
-
+    created_at = models.DateTimeField(default=timezone.now)  # Set default value for existing rows
 
 
     def calculate_grand_total(self):

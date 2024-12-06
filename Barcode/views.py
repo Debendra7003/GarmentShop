@@ -129,7 +129,8 @@ class GenerateBarcodeView(APIView):
                     item_name=item_name,
                     item_size=item_size,
                     item_price=item_price,
-                    serial_number=serial_number
+                    serial_number=serial_number,
+                    category_name=category_name
                 )
                 barcode_instance.barcode_image.save(f"{serial_number}.png", ContentFile(buffer.read()))
                 barcode_instance.save()
@@ -144,6 +145,20 @@ class GenerateBarcodeView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             # Catch any other unexpected errors
+            return Response({"error": "An unexpected error occurred", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    #Get api for barcode
+    def get(self, request, *args, **kwargs):
+        try:
+            # Retrieve all barcode items from the BarcodeGen model
+            barcode_instances = BarcodeGen.objects.all()
+
+            # Serialize the barcode instances
+            serializer = BarcodeSerializer(barcode_instances, many=True)
+
+            # Return the serialized data
+            return Response({"barcodes": serializer.data}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
             return Response({"error": "An unexpected error occurred", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
