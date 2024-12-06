@@ -61,9 +61,6 @@ class BarcodeGenerateAPIView(APIView):
 
 
 class GenerateBarcodeView(APIView):
-    # permission_classes=[IsAuthenticated]
-    # renderer_classes=[UserRenderer]
-    # @csrf_exempt
     def post(self, request, *args, **kwargs):
         try:
             # Parse JSON data
@@ -134,7 +131,7 @@ class GenerateBarcodeView(APIView):
                     item_size=item_size,
                     item_price=item_price,
                     serial_number=serial_number,
-                    category_name=category_name
+                    barcode_image_base64=encoded_image 
                 )
                 barcode_instance.barcode_image.save(f"{serial_number}.png", ContentFile(buffer.read()))
                 barcode_instance.save()
@@ -154,6 +151,8 @@ class GenerateBarcodeView(APIView):
         except Exception as e:
             # Catch any other unexpected errors
             return Response({"error": "An unexpected error occurred", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    
     #Get api for barcode
     def get(self, request, *args, **kwargs):
         try:
