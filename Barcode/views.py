@@ -133,7 +133,8 @@ class GenerateBarcodeView(APIView):
                     item_name=item_name,
                     item_size=item_size,
                     item_price=item_price,
-                    serial_number=serial_number
+                    serial_number=serial_number,
+                    barcode_image_base64=encoded_image 
                 )
                 barcode_instance.barcode_image.save(f"{serial_number}.png", ContentFile(buffer.read()))
                 barcode_instance.save()
