@@ -6,9 +6,15 @@ from rest_framework.permissions import IsAuthenticated
 from .renderers import UserRenderer  # Assuming this exists for custom rendering
 from .models import Order
 from decimal import Decimal
-from django.db.models import F
+from django.db.models import F,Sum
 from django.db import transaction
 from GarmentShopAPI.models import Item, ItemSize  # Import Item and ItemSize models
+from RetailSale.models import Order
+from django.utils.dateparse import parse_date  # Import parse_date
+from django.db.models.functions import TruncDate
+import json
+
+
 
 class CreateOrderView(APIView):
     permission_classes = [IsAuthenticated]
@@ -203,9 +209,12 @@ class RetrieveOrderByBillNumberView(APIView):
             "narration": order.narration,
             "payment_method1_amount": str(order.payment_method1_amount) if isinstance(order.payment_method1_amount, Decimal) else order.payment_method1_amount,
             "payment_method2_amount": str(order.payment_method2_amount) if isinstance(order.payment_method2_amount, Decimal) else order.payment_method2_amount,
+            "saletype":item.saletype,
             "items": [
                 {
                     "barcode": item.barcode,
+                    "category":item.category,
+                    "sub_category":item.sub_category,
                     "item_name": item.item_name,
                     "unit": item.unit,
                     "unit_price": str(item.unit_price) if isinstance(item.unit_price, Decimal) else item.unit_price,
@@ -215,3 +224,196 @@ class RetrieveOrderByBillNumberView(APIView):
         }
 
         return Response(order_data, status=status.HTTP_200_OK)
+         # Queryset to generate the report
+
+class SalesReportView(APIView):
+    def get(self, request):
+        """
+        Retrieve date-wise sales report with sale type, category, total amount, and total units.
+        """
+        # Aggregate data based on Orders
+        report_data = (
+            Order.objects
+            .filter(items__isnull=False)  # Ensure that the order has related items
+            .values(
+                date=TruncDate('created_at'),  # Group by date of the order
+                sale_type=F('saletype'),       # Group by sale type from Order (use an alias name)
+                category=F('items__category'), # Group by category from related Item
+            )
+            .annotate(
+                total_amount=Sum(F('items__unit') * F('items__unit_price')),  # Calculate total amount based on related Item fields
+                total_unit=Sum('items__unit')  # Calculate total units based on related Item quantity
+            )
+            .order_by('date', 'sale_type','category')  # Order results by date and sale_type
+        )
+
+        # Prepare the response data
+        report_list = []
+        for entry in report_data:
+            report_list.append({
+                "date": entry['date'],
+                "sale_type": entry['sale_type'],  # Sale type (RetailSale or BulkSale)
+                "category":entry['category'],
+                "total_amount": str(entry['total_amount']) if isinstance(entry['total_amount'], Decimal) else entry['total_amount'],
+                "total_unit": entry['total_unit']  # Total units sold
+            })
+
+        return Response(report_list, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        """
+        Retrieve filtered date-wise sales report with sale type, category, total amount, and total units.
+        Additionally, return the total sum of all amounts for the specified date range.
+        """
+        # Extract filter parameters from the request body
+        start_date = request.data.get('start_date')
+        end_date = request.data.get('end_date')
+        sale_type = request.data.get('sale_type')
+
+        # Validate date input
+        if start_date:
+            start_date = parse_date(start_date)
+            if not start_date:
+                return Response({"error": "Invalid start_date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if end_date:
+            end_date = parse_date(end_date)
+            if not end_date:
+                return Response({"error": "Invalid end_date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Build the query filters dynamically
+        filters = {}
+        if start_date:
+            filters['created_at__date__gte'] = start_date
+        if end_date:
+            filters['created_at__date__lte'] = end_date
+        if sale_type:
+            filters['saletype'] = sale_type
+
+        # Aggregate data based on Orders
+        report_data = (
+            Order.objects
+            .filter(items__isnull=False, **filters)  # Apply dynamic filters
+            .values(
+                date=TruncDate('created_at'),  # Group by date of the order
+                sale_type=F('saletype'),       # Group by sale type from Order
+                category=F('items__category'), # Group by category from related Item
+            )
+            .annotate(
+                total_amount=Sum(F('items__unit') * F('items__unit_price')),  # Calculate total amount
+                total_unit=Sum('items__unit')  # Calculate total units
+            )
+            .order_by('date', 'sale_type', 'category')  # Order results
+        )
+
+        # Calculate the total sum of all amounts in the filtered dataset
+        total_sum = report_data.aggregate(total_sum=Sum('total_amount'))['total_sum']
+
+        # Prepare the response data
+        report_list = [
+            {
+                "date": entry['date'],
+                "sale_type": entry['sale_type'],
+                "category": entry['category'],
+                "total_amount": str(entry['total_amount']) if isinstance(entry['total_amount'], Decimal) else entry['total_amount'],
+                "total_unit": entry['total_unit']
+            }
+            for entry in report_data
+        ]
+
+        # Return the response, including the summary
+        return Response({
+            "message": "Filtered sales report retrieved successfully.",
+            "report": report_list,
+            "total_sum": str(total_sum) if isinstance(total_sum, Decimal) else total_sum
+        }, status=status.HTTP_200_OK)
+
+class CustomerSummaryView(APIView):
+     def post(self, request):
+        """
+        Accept fullname and retrieve total sales summary for that user.
+        """
+        fullname = request.data.get("fullname")
+        
+        if not fullname:
+            return Response({"error": "Fullname is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Assuming 'customer' is the field that relates to the user (adjust if necessary)
+        orders = (
+            Order.objects
+            .filter(fullname=fullname, items__isnull=False)  # Adjust this based on your model's relationship
+            .prefetch_related('items')  # Prefetch related items to optimize queries
+        )
+
+        total_amount = Decimal('0.00')
+        total_quantity = 0
+
+        # Loop through orders and calculate total sales
+        for order in orders:
+            # Add total_price directly from the Order table
+            total_amount += order.total_price
+            
+            # Add the quantity of items in the order
+            for item in order.items.all():
+                total_quantity += item.unit  # Summing up item units
+
+        # Calculate average amount per unit (if there are any units sold)
+        average_amount = total_amount / total_quantity if total_quantity > 0 else Decimal('0.00')
+
+        # Prepare the response data
+        response_data = {
+            "fullname": fullname,
+            "total_amount": str(total_amount),  # Ensure the total amount is converted to string for consistency
+            "total_quantity": total_quantity,
+            "average_amount": str(average_amount)  # Average amount per unit
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+    
+     def get(self, request):
+        """
+        Retrieve sales summary for all users, including total amount, total quantity, and average amount.
+        """
+        # Retrieve all orders with related items (prefetch to avoid multiple queries)
+        orders = (
+            Order.objects
+            .filter(items__isnull=False)  # Ensure that the order has related items
+            .prefetch_related('items')    # Prefetch related items to optimize queries
+        )
+
+        user_sales_data = {}
+
+        # Loop through orders and aggregate sales data by customer
+        for order in orders:
+            fullname = order.fullname  # Adjust field name as needed
+
+            if fullname not in user_sales_data:
+                user_sales_data[fullname] = {
+                    "total_amount": Decimal('0.00'),
+                    "total_quantity": 0
+                }
+
+            # Add total_price from Order model
+            user_sales_data[fullname]["total_amount"] += order.total_price
+
+            # Add quantity from related items
+            for item in order.items.all():
+                user_sales_data[fullname]["total_quantity"] += item.unit
+
+        # Prepare the response data with calculated averages
+        response_data = []
+        for fullname, data in user_sales_data.items():
+            total_amount = data["total_amount"]
+            total_quantity = data["total_quantity"]
+
+            # Calculate average amount per unit (if there are any units sold)
+            average_amount = total_amount / total_quantity if total_quantity > 0 else Decimal('0.00')
+
+            response_data.append({
+                "fullname": fullname,
+                "total_amount": str(total_amount),  # Ensure the total amount is converted to string
+                "total_quantity": total_quantity,
+                "average_amount": str(average_amount)  # Average amount per unit
+            })
+
+        return Response(response_data, status=status.HTTP_200_OK)

@@ -3,6 +3,7 @@ from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
 from django.core.validators import RegexValidator, EmailValidator
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
+
 # Create your models here.
 
 
@@ -118,6 +119,7 @@ class SubCategory(models.Model):
 #Item Creation
 
 class Item(models.Model):
+    
     item_name = models.CharField(max_length=255)
     item_code = models.CharField(max_length=100, unique=True,blank=True, null=True)
     category_item = models.CharField(max_length=255, default='default_category')

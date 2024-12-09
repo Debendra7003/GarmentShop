@@ -9,6 +9,7 @@ class BarcodeItemSerializer(serializers.ModelSerializer):
 
 
 class BarcodeSerializer(serializers.ModelSerializer):
+    #barcode_image_base64 = serializers.CharField(source='barcode_image_base64', read_only=True)
     class Meta:
         model = BarcodeGen
         fields = ['shop_name','category_name', 'item_name', 'item_size', 'item_price', 'serial_number', 'barcode_image','barcode_image_base64']

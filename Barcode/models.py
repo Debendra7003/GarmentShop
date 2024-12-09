@@ -20,7 +20,11 @@ class BarcodeGen(models.Model):
     item_price = models.DecimalField(max_digits=100, decimal_places=2)
     serial_number = models.CharField(max_length=20, unique=True)
     barcode_image = models.ImageField(upload_to='barcodes/')
+<<<<<<< HEAD
     barcode_image_base64 = models.TextField() 
+=======
+    barcode_image_base64 = models.TextField(blank=True, null=True)  # Field for Base64 image
+>>>>>>> be9aa2d8123966c20a1d5cc27cbff6d5f39719be
 
     def __str__(self):
         return f"{self.item_name} - {self.serial_number}"
