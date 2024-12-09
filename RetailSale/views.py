@@ -327,3 +327,93 @@ class SalesReportView(APIView):
             "report": report_list,
             "total_sum": str(total_sum) if isinstance(total_sum, Decimal) else total_sum
         }, status=status.HTTP_200_OK)
+
+class CustomerSummaryView(APIView):
+     def post(self, request):
+        """
+        Accept fullname and retrieve total sales summary for that user.
+        """
+        fullname = request.data.get("fullname")
+        
+        if not fullname:
+            return Response({"error": "Fullname is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Assuming 'customer' is the field that relates to the user (adjust if necessary)
+        orders = (
+            Order.objects
+            .filter(fullname=fullname, items__isnull=False)  # Adjust this based on your model's relationship
+            .prefetch_related('items')  # Prefetch related items to optimize queries
+        )
+
+        total_amount = Decimal('0.00')
+        total_quantity = 0
+
+        # Loop through orders and calculate total sales
+        for order in orders:
+            # Add total_price directly from the Order table
+            total_amount += order.total_price
+            
+            # Add the quantity of items in the order
+            for item in order.items.all():
+                total_quantity += item.unit  # Summing up item units
+
+        # Calculate average amount per unit (if there are any units sold)
+        average_amount = total_amount / total_quantity if total_quantity > 0 else Decimal('0.00')
+
+        # Prepare the response data
+        response_data = {
+            "fullname": fullname,
+            "total_amount": str(total_amount),  # Ensure the total amount is converted to string for consistency
+            "total_quantity": total_quantity,
+            "average_amount": str(average_amount)  # Average amount per unit
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+    
+     def get(self, request):
+        """
+        Retrieve sales summary for all users, including total amount, total quantity, and average amount.
+        """
+        # Retrieve all orders with related items (prefetch to avoid multiple queries)
+        orders = (
+            Order.objects
+            .filter(items__isnull=False)  # Ensure that the order has related items
+            .prefetch_related('items')    # Prefetch related items to optimize queries
+        )
+
+        user_sales_data = {}
+
+        # Loop through orders and aggregate sales data by customer
+        for order in orders:
+            fullname = order.fullname  # Adjust field name as needed
+
+            if fullname not in user_sales_data:
+                user_sales_data[fullname] = {
+                    "total_amount": Decimal('0.00'),
+                    "total_quantity": 0
+                }
+
+            # Add total_price from Order model
+            user_sales_data[fullname]["total_amount"] += order.total_price
+
+            # Add quantity from related items
+            for item in order.items.all():
+                user_sales_data[fullname]["total_quantity"] += item.unit
+
+        # Prepare the response data with calculated averages
+        response_data = []
+        for fullname, data in user_sales_data.items():
+            total_amount = data["total_amount"]
+            total_quantity = data["total_quantity"]
+
+            # Calculate average amount per unit (if there are any units sold)
+            average_amount = total_amount / total_quantity if total_quantity > 0 else Decimal('0.00')
+
+            response_data.append({
+                "fullname": fullname,
+                "total_amount": str(total_amount),  # Ensure the total amount is converted to string
+                "total_quantity": total_quantity,
+                "average_amount": str(average_amount)  # Average amount per unit
+            })
+
+        return Response(response_data, status=status.HTTP_200_OK)
