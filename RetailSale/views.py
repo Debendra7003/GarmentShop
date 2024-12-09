@@ -13,6 +13,9 @@ from RetailSale.models import Order
 from django.utils.dateparse import parse_date  # Import parse_date
 from django.db.models.functions import TruncDate
 import json
+from calendar import month_name
+from django.db.models.functions import TruncDate, TruncMonth, TruncYear
+from datetime import date
 
 
 
@@ -150,10 +153,10 @@ class CalculateTotalPriceView(APIView):
         Calculate the total price based on grand_total, discount, and tax.
         """
         try:
-            grand_total = Decimal(request.data.get('grand_total'))
-            discount = Decimal(request.data.get('discount'))
-            tax = Decimal(request.data.get('tax'))
-        except (TypeError, ValueError, Decimal.InvalidOperation):
+            grand_total = Decimal(request.data.get('grand_total', 0))  # Default to 0 if not present
+            discount = Decimal(request.data.get('discount', 0))        # Default to 0 if not present
+            tax = Decimal(request.data.get('tax', 0))                  # Default to 0 if not present
+        except (TypeError, ValueError, InvalidOperation):
             return Response({"error": "Invalid input. Please provide valid numbers for grand_total, discount, and tax."}, status=status.HTTP_400_BAD_REQUEST)
         
         # Calculate total_price
@@ -415,5 +418,196 @@ class CustomerSummaryView(APIView):
                 "total_quantity": total_quantity,
                 "average_amount": str(average_amount)  # Average amount per unit
             })
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+#Get API for dashboard section
+
+class DailySalesView(APIView):
+    def get(self, request):
+        """
+        Retrieve daily sales report including date, sale type, total amount, and total units.
+        """
+        # Get the current date
+        current_date = date.today()
+
+        # Query to calculate daily sales data
+        daily_sales = (
+            Order.objects
+            .filter(items__isnull=False)  # Ensure that the order has related items
+            .values(
+                date=TruncDate('created_at'),  # Group by date
+                sale_type=F('saletype')        # Annotate sale_type
+            )
+            .annotate(
+                total_amount=Sum(F('items__unit') * F('items__unit_price')),  # Calculate total amount
+                total_unit=Sum('items__unit')  # Calculate total units
+            )
+            .order_by('date', 'sale_type')  # Order results
+        )
+
+        # Aggregate current date sales
+        current_day_sales = []
+        for entry in daily_sales:
+            if entry['date'] == current_date:
+                current_day_sales.append({
+                    "date": current_date.strftime('%Y-%m-%d'),
+                    "total_amount": str(entry['total_amount']),
+                    "total_units": entry['total_unit']
+                })
+
+        # Sum up total amounts for current date sales
+        total_current_day_amount = sum(Decimal(e['total_amount']) for e in current_day_sales) if current_day_sales else Decimal('0')
+        total_current_day_units = sum(e['total_units'] for e in current_day_sales) if current_day_sales else 0
+
+        # Construct the response data
+        response_data = {
+            "message": "Daily sales report retrieved successfully.",
+            "current_date": current_date.strftime('%Y-%m-%d'),
+            "current_day_sales": [
+                {
+                    "date": current_date.strftime('%Y-%m-%d'),
+                    "total_amount": str(total_current_day_amount),
+                    "total_units": total_current_day_units
+                }
+            ],
+            "all_sales": [
+                {
+                    "date": entry['date'].strftime('%Y-%m-%d'),
+                    "sale_type": entry['sale_type'],
+                    "total_amount": str(entry['total_amount']),
+                    "total_units": entry['total_unit']
+                }
+                for entry in daily_sales
+            ]
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+class MonthlySalesView(APIView):
+    def get(self, request):
+        """
+        Retrieve monthly sales report including month and year, sale type, total amount, and total units.
+        """
+        # Get the current month and year
+        current_year = date.today().year
+        current_month = date.today().strftime('%B')
+
+        # Query to calculate monthly sales data
+        monthly_sales = (
+            Order.objects
+            .filter(items__isnull=False)  # Ensure that the order has related items
+            .values(
+                month=TruncMonth('created_at'),  # Group by month
+                year=TruncYear('created_at'),  # Group by year
+                sale_type=F('saletype')         # Annotate sale_type
+            )
+            .annotate(
+                total_amount=Sum(F('items__unit') * F('items__unit_price')),  # Calculate total amount
+                total_unit=Sum('items__unit')  # Calculate total units
+            )
+            .order_by('year', 'month', 'sale_type')  # Order results
+        )
+
+        # Aggregate current month sales
+        current_month_sales = []
+        for entry in monthly_sales:
+            if entry['month'].strftime('%B') == current_month and entry['year'].year == current_year:
+                current_month_sales.append({
+                    "month": entry['month'].strftime('%B %Y'),
+                    "year": entry['year'].year,
+                    "total_amount": str(entry['total_amount']),
+                    "total_units": entry['total_unit']
+                })
+
+        # Sum up total amounts for current month sales
+        total_current_month_amount = sum(Decimal(e['total_amount']) for e in current_month_sales) if current_month_sales else Decimal('0')
+        total_current_month_units = sum(e['total_units'] for e in current_month_sales) if current_month_sales else 0
+
+        # Construct the response data
+        response_data = {
+            "message": "Monthly sales report retrieved successfully.",
+            "current_month": f"{current_month} {current_year}",
+            "current_month_sales": [
+                {
+                    "month": f"{current_month} {current_year}",
+                    "total_amount": str(total_current_month_amount),
+                    "total_units": total_current_month_units
+                }
+            ],
+            "all_sales": [
+                {
+                    "month": entry['month'].strftime('%B %Y'),
+                    "year": entry['year'].year,
+                    "sale_type": entry['sale_type'],
+                    "total_amount": str(entry['total_amount']),
+                    "total_units": entry['total_unit']
+                }
+                for entry in monthly_sales
+            ]
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+class YearlySalesView(APIView):
+    def get(self, request):
+        """
+        Retrieve yearly sales report including year, total amount, and total units.
+        """
+        # Get the current year
+        current_year = date.today().year
+
+        # Query to calculate yearly sales data
+        yearly_sales = (
+            Order.objects
+            .filter(items__isnull=False)  # Ensure that the order has related items
+            .values(
+                year=TruncYear('created_at'),  # Group by year
+                sale_type=F('saletype'),       # Annotate sale_type
+                category=F('items__category'),  # Annotate category
+            )
+            .annotate(
+                total_amount=Sum(F('items__unit') * F('items__unit_price')),  # Calculate total amount
+                total_unit=Sum('items__unit')  # Calculate total units
+            )
+            .order_by('year', 'sale_type', 'category')  # Order results
+        )
+
+        # Aggregate current year sales
+        current_year_sales = []
+        for entry in yearly_sales:
+            if entry['year'].year == current_year:
+                current_year_sales.append({
+                    "year": current_year,
+                    "total_amount": str(entry['total_amount']),
+                    "total_units": entry['total_unit']
+                })
+
+        # Sum up total amounts for current year sales
+        total_current_year_amount = sum(Decimal(e['total_amount']) for e in current_year_sales) if current_year_sales else Decimal('0')
+        total_current_year_units = sum(e['total_units'] for e in current_year_sales) if current_year_sales else 0
+
+        # Construct the response data
+        response_data = {
+            "message": "Yearly sales report retrieved successfully.",
+            "current_year": current_year,
+            "current_year_sales": [
+                {
+                    "year": current_year,
+                    "total_amount": str(total_current_year_amount),
+                    "total_units": total_current_year_units
+                }
+            ],
+            "all_sales": [
+                {
+                    "year": entry['year'].year,
+                    "sale_type": entry['sale_type'],
+                    "category": entry['category'],
+                    "total_amount": str(entry['total_amount']),
+                    "total_units": entry['total_unit']
+                }
+                for entry in yearly_sales
+            ]
+        }
 
         return Response(response_data, status=status.HTTP_200_OK)
