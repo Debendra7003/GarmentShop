@@ -1,3 +1,4 @@
+from datetime import datetime
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -10,26 +11,6 @@ from .renderers import UserRenderer  # Assuming you have a custom renderer
 class PurchaseEntryViewSet(APIView):
     permission_classes = [IsAuthenticated]
     renderer_classes = [UserRenderer]
-
-    def get(self, request, pk=None, party_name=None):
-        """
-        Retrieve all purchase entries or a specific one by ID or party_name.
-        """
-        if pk is None and party_name is None:
-            purchase_entries = PurchaseEntry.objects.all()
-            serializer = PurchaseEntrySerializer(purchase_entries, many=True)
-            return Response({"message": "Purchase entry list retrieved successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
-        
-        try:
-            if pk is not None:
-                purchase_entry = PurchaseEntry.objects.get(pk=pk)
-            else:
-                purchase_entry = PurchaseEntry.objects.get(party_name=party_name)
-                
-            serializer = PurchaseEntrySerializer(purchase_entry)
-            return Response({"message": "Purchase entry details retrieved successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
-        except PurchaseEntry.DoesNotExist:
-            return Response({"message": "Purchase entry not found."}, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request):
         """
@@ -73,4 +54,40 @@ class PurchaseEntryViewSet(APIView):
             return Response({"message": "Purchase entry deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)
         except PurchaseEntry.DoesNotExist:
             return Response({"message": "Purchase entry not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class PurchaseDetailsViewSet(APIView):
+    # permission_classes = [IsAuthenticated]
+    # renderer_classes = [UserRenderer]
+
+    def post(self, request):
+        """
+        Retrieve purchase entries within a date range and optionally filter by party_name.
+        """
+        from_date = request.data.get('from_date')
+        to_date = request.data.get('to_date')
+        party_name = request.data.get('party_name', None)
+
+        # Validate date inputs
+        if not from_date or not to_date:
+            return Response({"message": "Both from_date and to_date are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Parse dates
+            from_date = datetime.strptime(from_date, '%Y-%m-%d').date()
+            to_date = datetime.strptime(to_date, '%Y-%m-%d').date()
+        except ValueError:
+            return Response({"message": "Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Use the correct field for filtering
+        query = PurchaseEntry.objects.filter(voucher_date__range=[from_date, to_date])
+        if party_name:
+            query = query.filter(party_name=party_name)
+
+        # Serialize and return data
+        serializer = PurchaseEntrySerializer(query, many=True)
+        return Response({
+            "message": "Filtered purchase entries retrieved successfully!",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
 

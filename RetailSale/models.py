@@ -16,10 +16,6 @@ class Order(models.Model):
     narration = models.TextField(max_length=200,blank=True,null=True)
     payment_method1_amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method2_amount = models.DecimalField(max_digits=10, decimal_places=2)
-<<<<<<< HEAD
-=======
-    saletype = models.CharField(max_length=50, blank=True, null=True)  # New saletype field
->>>>>>> be9aa2d8123966c20a1d5cc27cbff6d5f39719be
     items = models.ManyToManyField('Item', related_name='order_items')  # Renamed 'items' to 'order_items'
     created_at = models.DateTimeField(default=timezone.now)  # Set default value for existing rows
 
