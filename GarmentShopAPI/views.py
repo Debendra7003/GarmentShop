@@ -10,6 +10,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import authenticate
 from rest_framework import viewsets
 from django.db.models import F
+from django.db.models import Q
+
 from .models import Company,Category,Item,Design,Party,Tax,FinancialYear,User,SubCategory,ItemSize
 
 
@@ -485,6 +487,39 @@ class ItemViewSet(APIView):
             return Response({
                 "message": "Item not found."
             }, status=status.HTTP_404_NOT_FOUND)
+
+#SearchQuery 
+    def post(self, request):
+        """
+        Perform a search for items based on item_name, category, or sub_category.
+        The search is flexible and accepts only one field if others are not provided.
+        """
+        item_name = request.data.get('item_name', '').strip()
+        category_item = request.data.get('category_item', '').strip()
+        sub_category = request.data.get('sub_category', '').strip()
+
+        # Retrieve all items from the database
+        all_items = Item.objects.all()
+        filtered_items = []
+
+        # Debugging: Print the received search criteria
+        print(f"Searching with item_name: '{item_name}', category: '{category_item}', sub_category: '{sub_category}'")
+
+        # Manually filter items based on the provided criteria
+        for item in all_items:
+            if (
+                (item_name and item_name.lower() in item.item_name.lower()) or
+                (category_item and category_item.lower() in item.category_item.lower()) or
+                (sub_category and sub_category.lower() in item.sub_category.lower())
+            ):
+                filtered_items.append(item)
+
+        # Serialize the filtered items
+        serializer = ItemSerializer(filtered_items, many=True)
+        return Response({
+            "message": "Search results retrieved successfully!",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
         
 #ItemCode view set
 class ItemCodeViewSet(APIView):
