@@ -1,9 +1,12 @@
 
-
+import random
+import io
+import base64
+from datetime import datetime
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.views import APIView,View
-from .models import BarcodeItem,BarcodeGen
+from rest_framework.views import APIView
+from .models import BarcodeGen
 from .serializers import BarcodeItemSerializer,BarcodeSerializer,BarcodeDetailsSerializer
 from rest_framework.permissions import IsAuthenticated 
 from .renderers import UserRenderer
@@ -12,11 +15,9 @@ from django.http import JsonResponse
 from barcode.writer import ImageWriter
 from io import BytesIO
 from django.core.files.base import ContentFile
-import base64
 from barcode import Code128
 from PIL import Image, ImageDraw, ImageFont
 import random
-import io
 import json
 from django.views.decorators.csrf import csrf_exempt
 
@@ -61,6 +62,7 @@ class BarcodeGenerateAPIView(APIView):
 
 
 class GenerateBarcodeView(APIView):
+    # permission_classes=[IsAuthenticated]
     def post(self, request, *args, **kwargs):
         try:
             # Parse JSON data
@@ -69,18 +71,21 @@ class GenerateBarcodeView(APIView):
             item_size = data.get("item_size")
             item_price = data.get("item_price")
             shop_name = data.get("shop_name")
-            category_name = data.get("category_name")  # New field
-            quantity = data.get("quantity", 1)  # Default to 1 if not provided
+            category_name = data.get("category_name")  
+            quantity = data.get("quantity", 1)  
 
             # Validate shop_name length
             if len(shop_name) > 25:
                 raise ValueError("shop_name cannot exceed 25 characters.")
 
             response_data = []
+            current_date = datetime.now().strftime("%d")
+            sequential_number = 1
 
             for _ in range(quantity):
                 # Generate a unique serial number based on shop name, item size, and a random number
-                serial_number = f"{shop_name[:2].upper()}{item_size}{random.randint(1000, 9999)}"
+                serial_number = f"{shop_name[:2].upper()}{item_size.upper()}{current_date}{sequential_number:04d}"
+                sequential_number += 1
 
                 # Generate the barcode image
                 barcode = Code128(serial_number, writer=ImageWriter())
@@ -92,12 +97,12 @@ class GenerateBarcodeView(APIView):
                     "write_text": False
                 })
 
-                # Create a blank image for adding additional text (like item details and shop name)
+                # Create a blank image for adding additional text
                 width, height = barcode_image.size
                 new_image = Image.new("RGB", (width + 40, height + 100), "white")
                 new_image.paste(barcode_image, (20, 80))
 
-                # Add text (item details, shop name) to the image
+                # Add text to the image
                 draw = ImageDraw.Draw(new_image)
                 try:
                     font = ImageFont.truetype("arial.ttf", 15)
