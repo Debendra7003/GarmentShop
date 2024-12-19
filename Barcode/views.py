@@ -127,6 +127,7 @@ class GenerateBarcodeView(APIView):
                 # Save barcode image and details to the database
                 barcode_instance = BarcodeGen(
                     shop_name=shop_name,
+                    category_name=category_name,
                     item_name=item_name,
                     item_size=item_size,
                     item_price=item_price,

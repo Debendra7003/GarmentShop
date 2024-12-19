@@ -5,7 +5,7 @@ from .serializers import OrderSerializer
 from rest_framework.permissions import IsAuthenticated
 from .renderers import UserRenderer  # Assuming this exists for custom rendering
 from .models import Order
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.db.models import F,Sum
 from django.db import transaction
 from GarmentShopAPI.models import Item, ItemSize  # Import Item and ItemSize models
@@ -156,7 +156,7 @@ class CalculateTotalPriceView(APIView):
             grand_total = Decimal(request.data.get('grand_total', 0))  # Default to 0 if not present
             discount = Decimal(request.data.get('discount', 0))        # Default to 0 if not present
             tax = Decimal(request.data.get('tax', 0))                  # Default to 0 if not present
-        except (TypeError, ValueError, InvalidOperation):
+        except (TypeError, ValueError,InvalidOperation):
             return Response({"error": "Invalid input. Please provide valid numbers for grand_total, discount, and tax."}, status=status.HTTP_400_BAD_REQUEST)
         
         # Calculate total_price
@@ -212,7 +212,7 @@ class RetrieveOrderByBillNumberView(APIView):
             "narration": order.narration,
             "payment_method1_amount": str(order.payment_method1_amount) if isinstance(order.payment_method1_amount, Decimal) else order.payment_method1_amount,
             "payment_method2_amount": str(order.payment_method2_amount) if isinstance(order.payment_method2_amount, Decimal) else order.payment_method2_amount,
-            "saletype":item.saletype,
+            "saletype":order.saletype,
             "items": [
                 {
                     "barcode": item.barcode,
