@@ -1,12 +1,14 @@
 from django.db import models
 from django.apps import apps
 from django.utils import timezone
+from django.db.models import Sum
 from django.core.exceptions import ObjectDoesNotExist
 class Order(models.Model):
     bill_number = models.CharField(max_length=10, unique=True, blank=True)  # For the serial bill number
     fullname = models.CharField(max_length=255)
-    phone_number = models.CharField(max_length=15)
+    phone_number = models.CharField(max_length=15,unique=True)
     address = models.TextField()
+    tax_type=models.CharField(max_length=30,default='na')
     tax = models.DecimalField(max_digits=10, decimal_places=2)
     discount = models.DecimalField(max_digits=10, decimal_places=2)
     grand_total = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
@@ -16,6 +18,7 @@ class Order(models.Model):
     narration = models.TextField(max_length=200,blank=True,null=True)
     payment_method1_amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method2_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    saletype=models.TextField(max_length=40,default="RetailSale")
     items = models.ManyToManyField('Item', related_name='order_items')  # Renamed 'items' to 'order_items'
     created_at = models.DateTimeField(default=timezone.now)  # Set default value for existing rows
 
@@ -89,3 +92,34 @@ class Item(models.Model):
         return self.unit * self.unit_price
     def __str__(self):
         return f"{self.item_name} ({self.category}) - {self.unit} x {self.unit_price}"
+
+
+class ItemPreview(models.Model):
+    item_name = models.CharField(max_length=255)
+    unit = models.PositiveIntegerField()
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    total_item_price = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
+
+    def save(self, *args, **kwargs):
+        self.total_item_price = self.unit * self.unit_price
+        super().save(*args, **kwargs)
+
+
+class PreviewGrandTotal(models.Model):
+    grand_total = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+
+    @classmethod
+    def update_grand_total(cls):
+        grand_total = ItemPreview.objects.aggregate(grand_total=Sum('total_item_price'))['grand_total'] or 0
+        summary, created = cls.objects.get_or_create(id=1)  # Singleton pattern
+        summary.grand_total = grand_total
+        summary.save()
+        return summary.grand_total
+
+class StockDeduction(models.Model):
+    item_size = models.ForeignKey('GarmentShopAPI.ItemSize', related_name="stock_deductions", on_delete=models.CASCADE)
+    change_date = models.DateTimeField(default=timezone.now)  # Date and time of the stock change
+    change_quantity = models.IntegerField()  # Quantity before the change
+
+    def __str__(self):
+        return f"History for {self.item_size.item.item_name} - {self.item_size.size} on {self.change_date}"

@@ -24,39 +24,39 @@ from django.views.decorators.csrf import csrf_exempt
 
 
 
-class BarcodeGenerateAPIView(APIView):
-    permission_classes=[IsAuthenticated]
-    renderer_classes=[UserRenderer]
-    def post(self, request, *args, **kwargs):
-        serializer = BarcodeItemSerializer(data=request.data)
-        if serializer.is_valid():
-            item_name = serializer.validated_data['item_name']
-            description = serializer.validated_data['description']
-            size = serializer.validated_data['size']
-            mrp = serializer.validated_data['mrp']
+# class BarcodeGenerateAPIView(APIView):
+#     permission_classes=[IsAuthenticated]
+#     renderer_classes=[UserRenderer]
+#     def post(self, request, *args, **kwargs):
+#         serializer = BarcodeItemSerializer(data=request.data)
+#         if serializer.is_valid():
+#             item_name = serializer.validated_data['item_name']
+#             description = serializer.validated_data['description']
+#             size = serializer.validated_data['size']
+#             mrp = serializer.validated_data['mrp']
 
-            # Combine fields for unique barcode content
-            barcode_content = f"{item_name}-{description}-{size}-{mrp}"
+#             # Combine fields for unique barcode content
+#             barcode_content = f"{item_name}-{description}-{size}-{mrp}"
             
-            # Generate the barcode
-            barcode_class = barcode.get_barcode_class('code128')
-            barcode_image = barcode_class(barcode_content, writer=ImageWriter())
+#             # Generate the barcode
+#             barcode_class = barcode.get_barcode_class('code128')
+#             barcode_image = barcode_class(barcode_content, writer=ImageWriter())
 
-            # Save barcode image to a file
-            file_path = f"Barcode\barcode\m{barcode_content}.png"
-            barcode_image.save(file_path)
+#             # Save barcode image to a file
+#             file_path = f"Barcode\barcode\m{barcode_content}.png"
+#             barcode_image.save(file_path)
 
-            # Optionally, store the generated file in a variable as binary data
-            with open(file_path, "rb") as image_file:
-                barcode_data = image_file.read()
+#             # Optionally, store the generated file in a variable as binary data
+#             with open(file_path, "rb") as image_file:
+#                 barcode_data = image_file.read()
 
-            # If needed, encode the image to base64 for API response
-            image_data = base64.b64encode(barcode_data).decode('utf-8')
+#             # If needed, encode the image to base64 for API response
+#             image_data = base64.b64encode(barcode_data).decode('utf-8')
             
-            # Respond with the file path or base64 data as needed
-            return Response({"file_path": file_path, "barcode_base64": image_data}, status=status.HTTP_201_CREATED)
+#             # Respond with the file path or base64 data as needed
+#             return Response({"file_path": file_path, "barcode_base64": image_data}, status=status.HTTP_201_CREATED)
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -70,6 +70,7 @@ class GenerateBarcodeView(APIView):
             item_price = data.get("item_price")
             shop_name = data.get("shop_name")
             category_name = data.get("category_name")  # New field
+            sub_category = data.get("sub_category")
             quantity = data.get("quantity", 1)  # Default to 1 if not provided
 
             # Validate shop_name length
@@ -130,6 +131,8 @@ class GenerateBarcodeView(APIView):
                     item_name=item_name,
                     item_size=item_size,
                     item_price=item_price,
+                    category_name=category_name,
+                    sub_category=sub_category,
                     serial_number=serial_number,
                     barcode_image_base64=encoded_image 
                 )

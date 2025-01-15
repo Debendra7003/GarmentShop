@@ -21,6 +21,18 @@ class PurchaseEntryViewSet(APIView):
             serializer.save()
             return Response({"message": "Purchase entry created successfully!", "data": serializer.data}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request):
+        """
+        Retrieve all purchase entries.
+        """
+        purchase_entries = PurchaseEntry.objects.all()
+        serializer = PurchaseEntrySerializer(purchase_entries, many=True)
+        return Response({
+            "message": "All purchase entries retrieved successfully!",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+
 
     def put(self, request, pk=None, party_name=None):
         """

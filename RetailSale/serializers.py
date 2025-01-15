@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Order, Item
+from .models import Order, Item,ItemPreview
 from decimal import Decimal
 
 class ItemSerializer(serializers.ModelSerializer):
@@ -16,7 +16,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['id', 'fullname', 'phone_number', 'address', 'tax', 'discount', 
+        fields = ['id', 'fullname', 'phone_number', 'address', 'tax','tax_type', 'discount', 
                   'grand_total', 'total_price', 'payment_method1', 'payment_method2', 
                   'narration', 'payment_method1_amount', 'payment_method2_amount','saletype', 'items']
 
@@ -47,3 +47,10 @@ class OrderSerializer(serializers.ModelSerializer):
                 representation[field] = str(value)  # Or you can use float(value) if you prefer a float
 
         return representation
+
+#ItemPreview Serializer
+class ItemPreviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ItemPreview
+        fields = ['item_name', 'unit', 'unit_price', 'total_item_price']
+        read_only_fields = ['total_item_price']

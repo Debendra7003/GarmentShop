@@ -68,6 +68,7 @@ class User(AbstractBaseUser):
         "Is the user a member of staff?"
         # Simplest possible answer: All admins are staff
         return self.is_admin
+   
     
 #Company Creation
 class Company(models.Model):
@@ -139,6 +140,15 @@ class ItemSize(models.Model):
 
     def __str__(self):
         return f"{self.size} - {self.stock_quantity}"
+
+class StockHistory(models.Model):
+    item_size = models.ForeignKey(ItemSize, related_name="stock_history", on_delete=models.CASCADE)
+    change_date = models.DateTimeField(default=timezone.now)  # Date and time of the stock change
+    change_quantity = models.IntegerField()  # Quantity before the change
+
+    def __str__(self):
+        return f"History for {self.item_size.item.item_name} - {self.item_size.size} on {self.change_date}"
+
     
 #Design Creation
 class Design(models.Model):
