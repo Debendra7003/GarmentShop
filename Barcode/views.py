@@ -1,9 +1,12 @@
 
-
+import random
+import io
+import base64
+from datetime import datetime
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.views import APIView,View
-from .models import BarcodeItem,BarcodeGen
+from rest_framework.views import APIView
+from .models import BarcodeGen
 from .serializers import BarcodeItemSerializer,BarcodeSerializer,BarcodeDetailsSerializer
 from rest_framework.permissions import IsAuthenticated 
 from .renderers import UserRenderer
@@ -12,11 +15,9 @@ from django.http import JsonResponse
 from barcode.writer import ImageWriter
 from io import BytesIO
 from django.core.files.base import ContentFile
-import base64
 from barcode import Code128
 from PIL import Image, ImageDraw, ImageFont
 import random
-import io
 import json
 from django.views.decorators.csrf import csrf_exempt
 
@@ -61,6 +62,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 
 class GenerateBarcodeView(APIView):
+    # permission_classes=[IsAuthenticated]
     def post(self, request, *args, **kwargs):
         try:
             # Parse JSON data
@@ -78,10 +80,13 @@ class GenerateBarcodeView(APIView):
                 raise ValueError("shop_name cannot exceed 25 characters.")
 
             response_data = []
+            current_date = datetime.now().strftime("%d")
+            sequential_number = 1
 
             for _ in range(quantity):
                 # Generate a unique serial number based on shop name, item size, and a random number
-                serial_number = f"{shop_name[:2].upper()}{item_size}{random.randint(1000, 9999)}"
+                serial_number = f"{shop_name[:2].upper()}{item_size.upper()}{current_date}{sequential_number:04d}"
+                sequential_number += 1
 
                 # Generate the barcode image
                 barcode = Code128(serial_number, writer=ImageWriter())
@@ -93,12 +98,12 @@ class GenerateBarcodeView(APIView):
                     "write_text": False
                 })
 
-                # Create a blank image for adding additional text (like item details and shop name)
+                # Create a blank image for adding additional text
                 width, height = barcode_image.size
                 new_image = Image.new("RGB", (width + 40, height + 100), "white")
                 new_image.paste(barcode_image, (20, 80))
 
-                # Add text (item details, shop name) to the image
+                # Add text to the image
                 draw = ImageDraw.Draw(new_image)
                 try:
                     font = ImageFont.truetype("arial.ttf", 15)
@@ -128,10 +133,10 @@ class GenerateBarcodeView(APIView):
                 # Save barcode image and details to the database
                 barcode_instance = BarcodeGen(
                     shop_name=shop_name,
+                    category_name=category_name,
                     item_name=item_name,
                     item_size=item_size,
                     item_price=item_price,
-                    category_name=category_name,
                     sub_category=sub_category,
                     serial_number=serial_number,
                     barcode_image_base64=encoded_image 
@@ -188,3 +193,21 @@ class GetBarcodeDetailsView(APIView):
             return Response({"error": "Item not found for the given barcode"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": "An unexpected error occurred", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+class BarcodeFetchView(APIView):
+    """
+    API endpoint to fetch barcode data by serial number.
+    """
+    def get(self, request, serial_number):
+        try:
+            # Fetch the BarcodeGen object using the serial_number
+            barcode_data = BarcodeGen.objects.get(serial_number=serial_number)
+            serializer = BarcodeSerializer(barcode_data)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except BarcodeGen.DoesNotExist:
+            return Response(
+                {"error": "Barcode not found."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
