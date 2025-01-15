@@ -44,7 +44,7 @@ class BarcodeGenerateAPIView(APIView):
             barcode_image = barcode_class(barcode_content, writer=ImageWriter())
 
             # Save barcode image to a file
-            file_path = f"Barcode\barcode\m{barcode_content}.png"
+            file_path = rf"Barcode\barcode\m{barcode_content}.png"
             barcode_image.save(file_path)
 
             # Optionally, store the generated file in a variable as binary data
@@ -191,3 +191,21 @@ class GetBarcodeDetailsView(APIView):
             return Response({"error": "Item not found for the given barcode"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": "An unexpected error occurred", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+class BarcodeFetchView(APIView):
+    """
+    API endpoint to fetch barcode data by serial number.
+    """
+    def get(self, request, serial_number):
+        try:
+            # Fetch the BarcodeGen object using the serial_number
+            barcode_data = BarcodeGen.objects.get(serial_number=serial_number)
+            serializer = BarcodeSerializer(barcode_data)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except BarcodeGen.DoesNotExist:
+            return Response(
+                {"error": "Barcode not found."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )

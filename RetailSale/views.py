@@ -98,7 +98,7 @@ class CreateOrderView(APIView):
                 return Response(
                     {
                         "message": "Order created successfully!",
-                        "bill_number": order.bill_number,
+                        "bil l_number": order.bill_number,
                         "data": updated_serializer.data
                     },
                     status=status.HTTP_201_CREATED
