@@ -1,3 +1,4 @@
+from datetime import datetime  # Import this at the top of the file
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -16,7 +17,9 @@ from django.db.models.functions import TruncDate
 import json
 from calendar import month_name
 from django.db.models.functions import TruncDate, TruncMonth, TruncYear
+import datetime
 from datetime import date
+
 
 
 
@@ -81,6 +84,8 @@ from datetime import date
 #                     status=status.HTTP_201_CREATED
 #                 )
 #             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# To create order
 
 class CreateOrderView(APIView):
     permission_classes = [IsAuthenticated]  # Adjust according to your authentication setup
@@ -148,8 +153,9 @@ class CreateOrderView(APIView):
                     status=status.HTTP_201_CREATED
                 )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+#To get all order details
 class GetOrderDetailsView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         """
         Retrieve all orders with detailed information.
@@ -189,6 +195,8 @@ class GetOrderDetailsView(APIView):
             order_list.append(order_data)
         
         return Response(order_list, status=status.HTTP_200_OK)
+
+#To calculate total pricing by taking grandtotal,discount and tax
 class CalculateTotalPriceView(APIView):
     permission_classes = [IsAuthenticated]
     renderer_classes = [UserRenderer]
@@ -209,6 +217,8 @@ class CalculateTotalPriceView(APIView):
 
         # Return the calculated total_price
         return Response({"total_price": str(total_price)}, status=status.HTTP_200_OK)
+
+#Calculate paymentmethod2 by taking totalprice and paymentmethod1
 class CalculatePaymentMethod2AmountView(APIView):
     permission_classes = [IsAuthenticated]
     renderer_classes=[UserRenderer]
@@ -229,6 +239,8 @@ class CalculatePaymentMethod2AmountView(APIView):
 
         #return response of calulated amount of payment_method1
         return Response({"payment_method2_amount": str(payment_method2_amount)}, status=status.HTTP_200_OK)
+
+#Retrive order details by passing bill number
 class RetrieveOrderByBillNumberView(APIView):
     permission_classes = [IsAuthenticated]
     renderer_classes = [UserRenderer]
@@ -273,8 +285,9 @@ class RetrieveOrderByBillNumberView(APIView):
 
         return Response(order_data, status=status.HTTP_200_OK)
          # Queryset to generate the report
-
+#Retrieve date-wise sales report with sale type, category, total amount, and total units.
 class SalesReportView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         """
         Retrieve date-wise sales report with sale type, category, total amount, and total units.
@@ -309,6 +322,7 @@ class SalesReportView(APIView):
         return Response(report_list, status=status.HTTP_200_OK)
 
     def post(self, request):
+        permission_classes = [IsAuthenticated]
         """
         Retrieve filtered date-wise sales report with sale type, category, total amount, and total units.
         Additionally, return the total sum of all amounts for the specified date range.
@@ -531,6 +545,7 @@ class CustomerSummaryView(APIView):
 #Get API for dashboard section
 
 class DailySalesView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         """
         Retrieve daily sales report including date, sale type, total amount, and total units.
@@ -570,6 +585,7 @@ class DailySalesView(APIView):
         # Construct the response data
         response_data = {
             "message": "Daily sales report retrieved successfully.",
+            "title":"Daily Sales Report",
             "current_date": current_date.strftime('%Y-%m-%d'),
             "current_day_sales": [
                 {
@@ -591,6 +607,7 @@ class DailySalesView(APIView):
 
         return Response(response_data, status=status.HTTP_200_OK)
 class MonthlySalesView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         """
         Retrieve monthly sales report including month and year, sale type, total amount, and total units.
@@ -633,6 +650,7 @@ class MonthlySalesView(APIView):
         # Construct the response data
         response_data = {
             "message": "Monthly sales report retrieved successfully.",
+            "title":"Monthly Sales Report",
             "current_month": f"{current_month} {current_year}",
             "current_month_sales": [
                 {
@@ -656,6 +674,7 @@ class MonthlySalesView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
 class YearlySalesView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         """
         Retrieve yearly sales report including year, total amount, and total units.
@@ -696,6 +715,7 @@ class YearlySalesView(APIView):
         # Construct the response data
         response_data = {
             "message": "Yearly sales report retrieved successfully.",
+            "title":"Yearly Sales Report",
             "current_year": current_year,
             "current_year_sales": [
                 {
@@ -718,38 +738,75 @@ class YearlySalesView(APIView):
 
         return Response(response_data, status=status.HTTP_200_OK)
 
-#Item Preview
-class ItemPreviewAPIView(APIView):
+#Retrive customer details by passing phonenumber in body
+class GetCustomerDetailsView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def post(self, request):
+        """
+        Retrieve the fullname and address of a customer by phone number.
+        """
+        phone_number = request.data.get("phone_number")
+
+        if not phone_number:
+            return Response(
+                {"error": "Phone number is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Assuming phone_number is unique in the Order model
+            order = Order.objects.get(phone_number=phone_number)
+            customer_data = {
+                "fullname": order.fullname,
+                "address": order.address,
+            }
+            return Response(customer_data, status=status.HTTP_200_OK)
+        except Order.DoesNotExist:
+            return Response(
+                {"error": "No customer found with the provided phone number."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+class ItemPreviewAPIView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request, *args, **kwargs):
+        # Extract 'items' from the request data
         items = request.data.get('items', [])
         if not isinstance(items, list):
             return Response({"error": "Invalid data format. 'items' should be a list."}, status=status.HTTP_400_BAD_REQUEST)
 
-        created_items = []
-        errors = []
+        created_items = []  # Stores successfully created items
+        errors = []  # Stores validation errors
+        grand_total = 0  # Initialize grand total for the current request
 
         for item_data in items:
             serializer = ItemPreviewSerializer(data=item_data)
             if serializer.is_valid():
+                # Save each valid item
                 created_item = serializer.save()
                 created_items.append(serializer.data)
+                # Add item's total_item_price to the grand total
+                grand_total += created_item.total_item_price
             else:
                 errors.append(serializer.errors)
 
-        # Update and retrieve grand_total
-        grand_total = PreviewGrandTotal.update_grand_total()
+        # Store the grand total in the database as a new record
+        PreviewGrandTotal.objects.create(grand_total=grand_total)
 
+        # Prepare the response
         response_data = {
             "message": "Items processed successfully.",
             "created_items": created_items,
             "errors": errors,
-            "grand_total": grand_total
+            "grand_total": grand_total  # Total for this request
         }
 
-        return Response(response_data, status=status.HTTP_201_CREATED if created_items else status.HTTP_400_BAD_REQUEST)
-
-
+        # Return response with status code
+        return Response(
+            response_data,
+            status=status.HTTP_201_CREATED if created_items else status.HTTP_400_BAD_REQUEST
+        )
 
 #StockHistory Report
 
@@ -826,7 +883,7 @@ class ItemPreviewAPIView(APIView):
 #         return Response({"data": item_data}, status=200)
 
 
-
+#Stock report with original stock_quantity,stockin,stockout and current stock
 class ItemStockSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -897,3 +954,102 @@ class ItemStockSummaryView(APIView):
                     })
 
         return Response({"data": item_data}, status=200)
+
+
+#Sale Tax Report
+class SalesTaxView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """
+        Fetch sales summary by date range and tax type.
+        """
+        # Extract date range and tax_type from the request
+        start_date = request.data.get('start_date')
+        end_date = request.data.get('end_date')
+        tax_type = request.data.get('tax_type')
+
+        # Validate the inputs
+        if not start_date or not end_date:
+            return Response({"error": "start_date and end_date are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+        except ValueError:
+            return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Filter orders within the date range and by tax type
+        orders = Order.objects.filter(
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date,
+            tax_type=tax_type
+        )
+
+        # Group by category and calculate sums
+        summary = orders.values('created_at__date', 'saletype').annotate(
+            total_price_sum=Sum('total_price'),
+            tax_sum=Sum('tax')
+        ).order_by('created_at__date', 'saletype')
+
+        # Format the response
+        data = [
+            {
+                "date": entry['created_at__date'],
+                "category": entry['saletype'],
+                "total_price": entry['total_price_sum'],
+                "total_tax": entry['tax_sum']
+            }
+            for entry in summary
+        ]
+
+        return Response({"data": data}, status=status.HTTP_200_OK)
+
+#Discount report
+class SaleDiscountSummaryView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        """
+        Retrieve sales discount summary based on a date range and sale type, 
+        including customer details.
+        """
+        # Get date range and saletype from the request
+        start_date = request.data.get('start_date')
+        end_date = request.data.get('end_date')
+        saletype = request.data.get('saletype')
+
+        if not start_date or not end_date or not saletype:
+            return Response({"error": "Start date, end date, and saletype are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Convert string dates to datetime objects
+            start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+        except ValueError:
+            return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Filter orders by the provided date range and sale type
+        orders = Order.objects.filter(
+            created_at__date__range=[start_date, end_date],
+            saletype=saletype
+        )
+
+        sales_summary = []
+
+        # Group data by date and calculate totals
+        for date in orders.values('created_at__date').distinct():
+            date_orders = orders.filter(created_at__date=date['created_at__date'])
+            
+            total_discount = date_orders.aggregate(Sum('discount'))['discount__sum'] or 0
+
+            # Collect customer details for the date
+            customer_details = date_orders.values('fullname', 'phone_number', 'address').distinct()
+
+            sales_summary.append({
+                "date": date['created_at__date'],
+                "saletype": saletype,
+                "total_discount": total_discount,
+                "customer_details": list(customer_details)
+            })
+
+        return Response({"sales_summary": sales_summary}, status=status.HTTP_200_OK)

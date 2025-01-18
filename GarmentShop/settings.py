@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'RetailSale',
     'Bulksale',
     'Garmentmodules',
+    'Salesreturn',
     
 
 ]

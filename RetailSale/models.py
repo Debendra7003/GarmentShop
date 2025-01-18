@@ -6,7 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 class Order(models.Model):
     bill_number = models.CharField(max_length=10, unique=True, blank=True)  # For the serial bill number
     fullname = models.CharField(max_length=255)
-    phone_number = models.CharField(max_length=15,unique=True)
+    phone_number = models.CharField(max_length=10)
     address = models.TextField()
     tax_type=models.CharField(max_length=30,default='na')
     tax = models.DecimalField(max_digits=10, decimal_places=2)

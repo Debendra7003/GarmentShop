@@ -26,6 +26,7 @@ urlpatterns = [
     path('api/bulksale/',include('Bulksale.urls')),
     path('api/userrole/',include('Userdetails.urls')),
     path('api/garmentmodule/',include('Garmentmodules.urls')),
+    path('api/salesreturn/',include('Salesreturn.urls')),
     
 
 ]

@@ -54,3 +54,17 @@ class ItemPreviewSerializer(serializers.ModelSerializer):
         model = ItemPreview
         fields = ['item_name', 'unit', 'unit_price', 'total_item_price']
         read_only_fields = ['total_item_price']
+
+    def validate(self, data):
+        # You can add validation for unit and unit_price if needed
+        if data['unit'] <= 0 or data['unit_price'] <= 0:
+            raise serializers.ValidationError("Unit and unit price must be positive values.")
+        return data
+
+    def create(self, validated_data):
+        # Calculate the total_item_price before creating the object
+        total_item_price = validated_data['unit'] * validated_data['unit_price']
+        validated_data['total_item_price'] = total_item_price
+
+        # Create and return the new ItemPreview object
+        return ItemPreview.objects.create(**validated_data)
